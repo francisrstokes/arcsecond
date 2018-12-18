@@ -1,6 +1,8 @@
 import {Left, Right} from 'data.either';
-
 const id = x => x;
+
+// type ParserState a = Either String (Int, String, a)
+// type Parser a b = () => ParserState a -> ParserState b
 
 export const pipeParsers = fns => () => state => {
   return fns.slice(1).reduce((nextState, fn) => fn()(nextState), fns[0]()(state))
@@ -10,77 +12,19 @@ export const composeParsers = fns => () => x => {
   return pipeParsers ([...fns].reverse()) (x);
 };
 
+//           tapParser :: (() => void) -> Parser a a
+export const tapParser = fn => () => state => {
+  fn(state.value);
+  return state;
+};
+
+//           parse :: Parser a b -> String -> Either String b
 export const parse = parser => targetString => {
   const parserState = Right([0, targetString, null]);
   return parser()(parserState).map(([_, __, result]) => result);
 };
 
-export const char = c => () => state => {
-  if (!c || c.length !== 1) {
-    throw new TypeError (`char must be called with a single character, but got ${c}`);
-  }
-
-  return state.chain(([index, targetString, res]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      if (rest[0] === c) {
-        return Right ([index + 1, targetString, c]);
-      } else {
-        return Left (`ParseError (position ${index}): Expecting character '${c}', got '${rest[0]}'`);
-      }
-    }
-    return Left (`ParseError (position ${index}): Expecting character '${c}', but got end of input.`);
-  });
-};
-
-export const str = s => () => state => {
-  if (!s || s.length < 1) {
-    throw new TypeError (`str must be called with a string with length > 1, but got ${s}`);
-  }
-
-  return state.chain(([index, targetString, res]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      if (rest.startsWith(s)) {
-        return Right ([index + s.length, targetString, s]);
-      } else {
-        return Left (`ParseError (position ${index}): Expecting string '${s}', got '${rest.slice(0, s.length)}...'`);
-      }
-    }
-    return Left (`ParseError (position ${index}): Expecting string '${s}', but got end of input.`);
-  });
-};
-
-export const digit = () => state => {
-  return state.chain(([index, targetString, res]) => {
-    const rest = targetString.slice(index);
-
-    if (rest.length >= 1) {
-      if (/[0-9]/.test(rest[0])) {
-        return Right ([index + 1, targetString, rest[0]]);
-      } else {
-        return Left (`ParseError (position ${index}): Expecting digit, got '${rest[0]}'`);
-      }
-    }
-    return Left (`ParseError (position ${index}): Expecting digit, but got end of input.`);
-  });
-}
-
-export const letter = () => state => {
-  return state.chain(([index, targetString, res]) => {
-    const rest = targetString.slice(index);
-
-    if (rest.length >= 1) {
-      if (/[a-zA-Z]/.test(rest[0])) {
-        return Right ([index + 1, targetString, rest[0]]);
-      } else {
-        return Left (`ParseError (position ${index}): Expecting letter, got ${rest[0]}`);
-      }
-    }
-    return Left (`ParseError (position ${index}): Expecting letter, but got end of input.`);
-  });
-}
-
+//           many :: Parser a b
 export const many = parser => () => state => {
   return state.chain(innerState => {
     const results = [];
@@ -110,6 +54,7 @@ export const many = parser => () => state => {
   });
 }
 
+//           many1 :: Parser a b
 export const many1 = parser => () => state => {
   const res = many (parser) () (state);
   return res.chain(([index, targetString, value]) => {
@@ -120,6 +65,111 @@ export const many1 = parser => () => state => {
   });
 }
 
+//           mapTo :: (a -> b) -> Parser a b
+export const mapTo = fn => () => state => {
+  return state.map(([index, targetString, res]) => {
+    return [index, targetString, fn(res)];
+  });
+}
+
+//           char :: Char -> Parser a String
+export const char = c => () => state => {
+  if (!c || c.length !== 1) {
+    throw new TypeError (`char must be called with a single character, but got ${c}`);
+  }
+
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+    if (rest.length >= 1) {
+      if (rest[0] === c) {
+        return Right ([index + 1, targetString, c]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting character '${c}', got '${rest[0]}'`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting character '${c}', but got end of input.`);
+  });
+};
+
+//           str :: String -> Parser a String
+export const str = s => () => state => {
+  if (!s || s.length < 1) {
+    throw new TypeError (`str must be called with a string with length > 1, but got ${s}`);
+  }
+
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+    if (rest.length >= 1) {
+      if (rest.startsWith(s)) {
+        return Right ([index + s.length, targetString, s]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting string '${s}', got '${rest.slice(0, s.length)}...'`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting string '${s}', but got end of input.`);
+  });
+};
+
+//           digit :: Parser a String
+export const digit = () => state => {
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+
+    if (rest.length >= 1) {
+      if (/[0-9]/.test(rest[0])) {
+        return Right ([index + 1, targetString, rest[0]]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting digit, got '${rest[0]}'`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting digit, but got end of input.`);
+  });
+}
+
+//           digits :: Parser a String
+export const digits = pipeParsers([
+  many1 (digit),
+  mapTo (x => x.join(''))
+]);
+
+//           letter :: Parser a String
+export const letter = () => state => {
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+
+    if (rest.length >= 1) {
+      if (/[a-zA-Z]/.test(rest[0])) {
+        return Right ([index + 1, targetString, rest[0]]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting letter, got ${rest[0]}`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting letter, but got end of input.`);
+  });
+}
+
+//           letters :: Parser a String
+export const letters = pipeParsers([
+  many1 (letter),
+  mapTo (x => x.join(''))
+]);
+
+//           anyOfString :: String -> Parser a String
+export const anyOfString = s => () => state => {
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+    if (rest.length >= 1) {
+      if (s.includes(rest[0])) {
+        return Right ([index + 1, targetString, rest[0]]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting any of the string "${s}", got ${rest[0]}`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting any of the string "${s}", but got end of input.`);
+  });
+};
+
+//           namedSequenceOf :: [(String, Parser a b)] -> Parser a (StrMap b)
 export const namedSequenceOf = pairedParsers => () => state => {
   return state.chain(innerState => {
     const results = {};
@@ -151,6 +201,7 @@ export const namedSequenceOf = pairedParsers => () => state => {
   });
 }
 
+//           sequenceOf :: [Parser a b] -> Parser a [b]
 export const sequenceOf = parsers => () => state => {
   return state.chain(innerState => {
     const results = [];
@@ -181,12 +232,7 @@ export const sequenceOf = parsers => () => state => {
   });
 }
 
-export const mapTo = fn => () => state => {
-  return state.map(([index, targetString, res]) => {
-    return [index, targetString, fn(res)];
-  });
-}
-
+//           sepBy :: Parser a b -> Parser a c -> Parser a [b]
 export const sepBy = valParser => sepParser => () => state => {
   return state.chain(innerState => {
     let nextState = innerState;
@@ -236,6 +282,7 @@ export const sepBy = valParser => sepParser => () => state => {
   });
 }
 
+//           sepBy1 :: Parser a b -> Parser a c -> Parser a [b]
 export const sepBy1 = valParser => sepParser => () => state => {
   const res = sepBy (valParser) (sepParser) () (state);
   return res.chain(([index, targetString, value]) => {
@@ -246,13 +293,7 @@ export const sepBy1 = valParser => sepParser => () => state => {
   });
 }
 
-export const toPromise = result => {
-  return result.cata({
-    Left: x => Promise.reject(x),
-    Right: x => Promise.resolve(x)
-  });
-}
-
+//           choice :: [Parser a b] -> Parser a b
 export const choice = parsers => () => state => {
   return state.chain(([index]) => {
     let match = null;
@@ -278,7 +319,8 @@ export const choice = parsers => () => state => {
   });
 }
 
-export const between = leftParser => rightParser => parser => () => pipeParsers ([
+//           between :: Parser a b -> Parser a c -> Parser a d -> Parser a d
+export const between = leftParser => rightParser => parser => pipeParsers ([
   sequenceOf ([
     leftParser,
     parser,
@@ -287,6 +329,7 @@ export const between = leftParser => rightParser => parser => () => pipeParsers 
   mapTo (([_, x]) => x)
 ]);
 
+//           everythingUntil :: Parser a b -> Parser a c
 export const everythingUntil = parser => () => state => {
   return state.chain (innerState => {
     const results = [];
@@ -312,7 +355,6 @@ export const everythingUntil = parser => () => state => {
         },
         Right: x => {
           exit = true;
-          nextState = x;
         }
       });
 
@@ -328,6 +370,18 @@ export const everythingUntil = parser => () => state => {
   });
 }
 
+//           anythingExcept :: Parser a b -> Parser a c
+export const anythingExcept = parser => () => state => {
+  return state.chain(([index, targetString]) => {
+    const out = parser()(state);
+    return out.cata({
+      Left: () => Right ([index + 1, targetString, targetString[index]]),
+      Right: ([_, __, s]) => Left (`ParseError 'anythingExcept' (position ${index}): Matched '${s}' from the exception parser`)
+    });
+  })
+}
+
+//           possibly :: Parser a b -> Parser a (b|null)
 export const possibly = parser => () => state => {
   return state.chain(([i, s]) => {
     const nextState = parser () (state);
@@ -338,6 +392,7 @@ export const possibly = parser => () => state => {
   });
 }
 
+//           skip :: Parser a b -> Parser a b
 export const skip = parser => () => state => {
   return state.chain(([_, __, value]) => {
     const nextState = parser () (state);
@@ -348,14 +403,34 @@ export const skip = parser => () => state => {
       }
     });
   })
-}
+};
 
+//           whitespace :: Parser a b -> Parser a String
+export const whitespace = pipeParsers ([
+  many (choice ([
+    char (' '),
+    char ('\n'),
+    char ('\t')
+  ])),
+  mapTo (x => x.join(''))
+]);
+
+//           takeRight :: Parser a b -> Parser a c -> Parser a c
 export const takeRight = lParser => rParser => pipeParsers ([
   sequenceOf([lParser, rParser]),
   mapTo (x => x[1])
 ]);
 
+//           takeLeft :: Parser a b -> Parser a c -> Parser a b
 export const takeLeft = lParser => rParser => pipeParsers ([
   sequenceOf([lParser, rParser]),
   mapTo (x => x[0])
 ]);
+
+//           toPromise :: Either a b -> Promise a b
+export const toPromise = result => {
+  return result.cata({
+    Left: x => Promise.reject(x),
+    Right: x => Promise.resolve(x)
+  });
+}

@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.mjs",
-  "module": "index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "repl": "node -r esm"
@@ -13,5 +12,8 @@
   "dependencies": {
     "data.either": "^1.5.2",
     "esm": "^3.0.84"
+  },
+  "devDependencies": {
+    "daggy": "^1.3.0"
   }
 }
