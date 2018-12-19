@@ -92,14 +92,14 @@ const parseNumber = pipeParsers ([
 
 const parseNull = pipeParsers ([ str ('null'), mapTo (JNull) ]);
 
-const commaSeparator = whitespaceSurrounded (char (','));
+const commaSeparated = sepBy (whitespaceSurrounded (char (',')));
 
 const keyValueSeparator = whitespaceSurrounded (char (':'));
 
 const parseArray = pipeParsers ([
   between (whitespaceSurrounded (char ('[')))
           (whitespaceSurrounded (char (']')))
-          (sepBy (parseJsonValue) (commaSeparator)),
+          (commaSeparated (parseJsonValue)),
   mapTo (JArray)
 ]);
 
@@ -130,7 +130,7 @@ const parseKeyValue = pipeParsers ([
 const parseObject = pipeParsers ([
   between (whitespaceSurrounded (char ('{')))
           (whitespaceSurrounded (char ('}')))
-          (sepBy (parseKeyValue) (commaSeparator)),
+          (commaSeparated (parseKeyValue)),
   mapTo (JObject),
 ])
 
