@@ -28,7 +28,7 @@ JSONType.prototype.toString = function (l = 0) {
 
 export const JBoolean = JSONType.JBoolean;
 export const JNumber = JSONType.JNumber;
-export const JNull = JSONType.JNull;
+export const JNull = () => JSONType.JNull;
 export const JArray = JSONType.JArray;
 export const JString = JSONType.JString;
 export const JObject = JSONType.JObject;

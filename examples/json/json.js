@@ -24,13 +24,24 @@ import {
   whitespace,
   between,
   anyOfString,
+  recursiveParser
 } from '../../index';
 
+import path from 'path';
 import {readFile} from 'fs';
 import {promisify} from 'util';
 const readFileAsync = promisify(readFile);
 
-const K = x => _ => x;
+// Recursive definition for a JSON value
+// This is needed because parseArray & parseObject also internally refer to parseJsonValue
+const parseJsonValue = recursiveParser(() => choice ([
+  parseNumber,
+  parseBool,
+  parseNull,
+  parseString,
+  parseArray,
+  parseObject,
+]));
 
 const escapedQuote = pipeParsers ([
   sequenceOf ([ str ('\\'), anyOfString (`"'`) ]),
@@ -79,25 +90,16 @@ const parseNumber = pipeParsers ([
   mapTo (JNumber)
 ]);
 
-const parseNull = pipeParsers ([ str ('null'), mapTo (K (JNull)) ]);
+const parseNull = pipeParsers ([ str ('null'), mapTo (JNull) ]);
 
-const arraySeparator = whitespaceSurrounded (char (','));
+const commaSeparator = whitespaceSurrounded (char (','));
 
 const keyValueSeparator = whitespaceSurrounded (char (':'));
-
-const parseJsonValue = () => choice ([
-  parseNumber,
-  parseBool,
-  parseNull,
-  parseString,
-  parseArray,
-  parseObject,
-]) ();
 
 const parseArray = pipeParsers ([
   between (whitespaceSurrounded (char ('[')))
           (whitespaceSurrounded (char (']')))
-          (sepBy (parseJsonValue) (arraySeparator)),
+          (sepBy (parseJsonValue) (commaSeparator)),
   mapTo (JArray)
 ]);
 
@@ -128,11 +130,13 @@ const parseKeyValue = pipeParsers ([
 const parseObject = pipeParsers ([
   between (whitespaceSurrounded (char ('{')))
           (whitespaceSurrounded (char ('}')))
-          (sepBy (parseKeyValue) (arraySeparator)),
+          (sepBy (parseKeyValue) (commaSeparator)),
   mapTo (JObject),
 ])
 
-readFileAsync('../../package-lock.json', 'utf8')
+
+const filepath = path.join(__dirname, '../..', 'package.json');
+readFileAsync(filepath, 'utf8')
   .then(parse (parseJsonValue))
   .then(x => console.log(x.value.toString()))
   .catch(console.log);

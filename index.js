@@ -415,6 +415,11 @@ export const whitespace = pipeParsers ([
   mapTo (x => x.join(''))
 ]);
 
+//
+
+//           recursiveParser :: (() => Parser a b) -> Parser a b
+export const recursiveParser = parserThunk => () => parserThunk()();
+
 //           takeRight :: Parser a b -> Parser a c -> Parser a c
 export const takeRight = lParser => rParser => pipeParsers ([
   sequenceOf([lParser, rParser]),
