@@ -5,7 +5,7 @@
   "main": "index",
   "module": "index.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node -r esm node_modules/jest/bin/jest.js",
     "repl": "node -r esm",
     "build": "babel index.mjs -o index.js"
   },
