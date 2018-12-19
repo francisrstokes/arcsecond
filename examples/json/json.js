@@ -29,7 +29,6 @@ import {
 
 import path from 'path';
 import {readFile} from 'fs';
-import path from  'path';
 import {promisify} from 'util';
 const readFileAsync = promisify(readFile);
 

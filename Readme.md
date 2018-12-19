@@ -2,7 +2,7 @@
 
 Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
-The name is also derrived from parsec, which in astronimical terms is an ["astronomical unit subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
+The name is also derrived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
 
 ## Introduction
 
@@ -16,7 +16,7 @@ A __Parser Combinator__ is a parser made by composing smaller parsers. For examp
 "Weather (one week ago): Rainy"
 ```
 
-We might break this down into a few different parser:
+We might break this down into a few different parsers:
 
 - One that can identify the literal string "Weather"
 - One that can identify a known time string inside brackets
@@ -122,16 +122,23 @@ const fullParser = pipeParsers ([
     str (': '),
     weatherType
   ]),
-  mapTo (([weatherStr, space, timeStr, colonStr, weatherType]) => [timeStr, weatherType])
+  mapTo (([weatherStr, space, timeStr, colonStr, weatherType]) => {
+    return {
+      time: timeStr,
+      weatherType: weatherType
+    };
+  })
 ]);
 
 // ...
 
 parseWeatherData('Weather (today): Sunny').value
-//  -> [ 'today', 'Sunny' ]
+//  -> { time: 'today', weatherType: 'Sunny' }
 ```
 
-Now we've thrown away all the useless information and only got what we really care about. The parser is still a little bit weak though, because we can't parse more interesting time strings like "two weeks ago" or "three days ago". We can easily add this support by writing one more little parser for it:
+Now we've thrown away all the useless information and only got what we really care about, in a data structure we've defined.
+
+The parser is still a little bit weak though, because we can't parse more interesting time strings like "two weeks ago" or "three days ago". We can easily add this support by writing a `complexTimeString` parser for it:
 
 ```javascript
 const {
@@ -185,6 +192,11 @@ const timeString = pipeParsers ([
   ]),
   mapTo (([lbracket, timeStr, rbracket]) => timeStr)
 ]);
+
+// ...
+
+parseWeatherData('Weather (three hours ago): Cloudy').value
+//  -> { time: 'three hours ago', weatherType: 'Cloudy' }
 ```
 
 Now we can handle more complex time strings. Of course in this example, something like "Weather (panda days ago): Sunny" is considered to be a valid string, because we don't have a parser for numbers spelled out as words. Implementing a parser to handle this case is left as an exercise for the reader.
