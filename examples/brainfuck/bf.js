@@ -17,7 +17,8 @@ import {
   choice,
   between,
   whitespace,
-  many
+  many,
+  recursiveParser
 } from '../../index';
 
 const asType = type => parser => pipeParsers ([
@@ -25,7 +26,7 @@ const asType = type => parser => pipeParsers ([
   mapTo (type)
 ]);
 
-const instructions = () => pipeParsers ([
+const instructions = recursiveParser(() => pipeParsers ([
   many (choice ([
     inc,
     dec,
@@ -36,7 +37,7 @@ const instructions = () => pipeParsers ([
     loop,
   ])),
   mapTo (Instructions)
-]) ();
+]));
 
 const inc = asType (Inc) (char ('+'));
 const dec = asType (Dec) (char ('-'));

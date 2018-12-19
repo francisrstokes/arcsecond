@@ -13,16 +13,17 @@ import {
   choice,
   between,
   letters,
-  takeRight
+  takeRight,
+  recursiveParser
 } from '../../index';
 
 const variable = pipeParsers ([ letters, mapTo (Variable) ]);
 
-const expr = () => choice ([
+const expr = recursiveParser(() => choice ([
   functionDefinition,
   variable,
   functionApplication
-]) ();
+]));
 
 const functionDefinition = pipeParsers ([
   sequenceOf ([
