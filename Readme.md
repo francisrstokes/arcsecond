@@ -323,9 +323,9 @@ The examples are built as es6 modules, which means they need node to be launched
 
 ## API
 
-*Non-essential note on the types:* This documentation using Hindley-Milner type signatures to show the types of function arguments and the return value.
+*Non-essential note on the types:* This documentation is using [Hindley-Milner type signatures](https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system) to show the types of function arguments and the return value.
 
-The two main "types" in arcsecond are `Parser a b` and `ParserState a`, which are loosely defined as:
+The two main "types" in arcsecond are `Parser a b` and `ParserState a`, which are defined as:
 
 `type ParserState a = Either String (Int, String, a)`
 
@@ -353,8 +353,8 @@ parse (str ('hello')) ('hello')
 
 **Example**
 ```javascript
-parse (c ('h')) ('hello')
-// -> Either.Right('hello')
+parse (char ('h')) ('hello')
+// -> Either.Right('h')
 ```
 
 ### str
@@ -446,8 +446,8 @@ parse (newParser) ('helloworld')
 
 **Example**
 ```javascript
-parse (anyOfString ('hello')) ('hello world')
-// -> Either.Right('h')
+parse (anyOfString ('aeiou')) ('unusual string')
+// -> Either.Right('u')
 ```
 
 ### sequenceOf
