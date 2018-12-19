@@ -203,6 +203,56 @@ Now we can handle more complex time strings. Of course in this example, somethin
 
 More useful examples, like a json parser, can be found in the [examples](examples/) directory of this repository.
 
+### Note on currying
+
+This library makes use for curried functions, which is a fancy way of saying that all the functions this library only take one argument. If they need to take more than one argument, they instead return a new function that takes the next argument.
+
+```javascript
+/*
+  Non curried function
+  Takes a and b as arguments
+*/
+const add = (a, b) => a + b;
+// add(1, 2) -> 3
+
+/*
+  Curried Version
+  Takes a as an argument, then returns a function that takes b as an argument
+*/
+const addCurried = a => b => a + b
+// addCurried(1)(2) -> 3
+```
+
+If none of this makes sense to you, [give this article a read](https://www.sitepoint.com/currying-in-functional-javascript/).
+
+### Note on error handling
+
+The return type of `parse (parser) (string)` is an [Either](https://github.com/folktale/data.either). This is a special data type that can represent *either* a success or a failure. It does this by actually being made of two types, called `Left` and `Right` (which you can think of as `Error` and `Success` respectively). If you understand how `Promise`s work in javascript then you already intuitively understand `Either`, because `Promises`s have a `Resolve` and a `Reject` type.
+
+You can get at the value of the `Either` using the `fold` method it exposes:
+
+```javascript
+const value = parse(parser)(string).fold(onErrorFn, onSuccessFn);
+```
+
+If you prefer to not work with the `Either` type, you can convert it to a promise:
+
+```javascript
+toPromise(parse(parser)(string))
+  .then(onSuccessFn)
+  .catch(onErrorFn);
+```
+
+Or you can convert it to a value directly, where an error will be thrown if one is present:
+
+```javascript
+try {
+  const value = toValue(parse(parser)(string));
+} catch (ex) {
+  // handle the error here
+}
+```
+
 ## Installation
 
 ```bash
@@ -212,9 +262,9 @@ npm i arcsecond
 ## Usage
 
 ```javascript
-const arc = require('arcsecond');
+const {parse, char} = require('arcsecond');
 
-arc.parse (arc.char ('a')) ('abc123');
+parse (char ('a')) ('abc123');
 ```
 
 ## API

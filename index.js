@@ -415,8 +415,6 @@ export const whitespace = pipeParsers ([
   mapTo (x => x.join(''))
 ]);
 
-//
-
 //           recursiveParser :: (() => Parser a b) -> Parser a b
 export const recursiveParser = parserThunk => () => parserThunk()();
 
@@ -437,5 +435,15 @@ export const toPromise = result => {
   return result.cata({
     Left: x => Promise.reject(x),
     Right: x => Promise.resolve(x)
+  });
+};
+
+//           toValue :: Either a b -> b
+export const toValue = result => {
+  return result.cata({
+    Left: x => {
+      throw new Error(x);
+    },
+    Right: x => x
   });
 }
