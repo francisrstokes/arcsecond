@@ -267,6 +267,19 @@ const {parse, char} = require('arcsecond');
 parse (char ('a')) ('abc123');
 ```
 
+## Running the examples
+
+```bash
+git clone git@github.com:francisrstokes/arcsecond.git
+cd arcsecond
+npm i
+
+# json example
+node -r esm examples/json/json.js
+```
+
+The examples are built as es6 modules, which means they need node to be launched with the `-r esm` require flag, which allows import and export statements to be used.
+
 ## API
 
 ## Recursive Grammars
