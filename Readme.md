@@ -4,6 +4,47 @@ Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Pars
 
 The name is also derrived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
 
+* [Introduction](#introduction)
+    * [A simple parser](#a-simple-parser)
+    * [Improving the simple parser](#improving-the-simple-parser)
+    * [Note on currying](#note-on-currying)
+    * [Note on error handling](#note-on-error-handling)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Running the examples](#running-the-examples)
+* [API](#api)
+    * [parse](#parse)
+    * [char](#char)
+    * [str](#str)
+    * [digit](#digit)
+    * [digits](#digits)
+    * [letter](#letter)
+    * [letters](#letters)
+    * [whitespace](#whitespace)
+    * [anyOfString](#anyofstring)
+    * [sequenceOf](#sequenceof)
+    * [namedSequenceOf](#namedsequenceof)
+    * [choice](#choice)
+    * [sepBy](#sepby)
+    * [sepBy1](#sepby1)
+    * [many](#many)
+    * [many1](#many1)
+    * [between](#between)
+    * [everythingUntil](#everythinguntil)
+    * [anythingExcept](#anythingexcept)
+    * [possibly](#possibly)
+    * [skip](#skip)
+    * [pipeParsers](#pipeparsers)
+    * [composeParsers](#composeparsers)
+    * [takeRight](#takeright)
+    * [takeLeft](#takeleft)
+    * [recursiveParser](#recursiveparser)
+    * [tapParser](#tapparser)
+    * [mapTo](#mapto)
+    * [toPromise](#topromise)
+    * [toValue](#tovalue)
+* [A note on recursive grammars](#a-note-on-recursive-grammars)
+
 ## Introduction
 
 ### A simple parser
@@ -733,7 +774,7 @@ const spaceSeparated = sepBy (char (' '));
 
 const matchNum = digits;
 const matchStr = letters;
-const matchArray = betweenSquareBrackets (commaSeparated (value))
+const matchArray = betweenSquareBrackets (commaSeparated (value));
 
 parse (spaceSeparated (value)) ('abc 123 [42,somethingelse] 45')
 // -> Either.Right([ 'abc', '123', [ '42', 'somethingelse' ], '45' ])
@@ -823,5 +864,40 @@ resultAsPromise
 // -> 'hello'
 ```
 
-## Recursive Grammars
+## A note on recursive grammars
 
+If you're pasrsing a programming language, a configuration, or anything of sufficient complexity, it's likely that you'll need to define some parsers in terms of each other. You might want to do something like:
+
+```javascript
+const value = choice ([
+  matchNum,
+  matchStr,
+  matchArray
+]);
+
+const betweenSquareBrackets = between (char ('[')) (char (']'));
+const commaSeparated = sepBy (char (','));
+
+const matchNum = digits;
+const matchStr = letters;
+const matchArray = betweenSquareBrackets (commaSeparated (value));
+```
+
+In this example, we are trying to define `value` in terms of `matchArray`, and `matchArray` in terms of `value`. This is problematic in a language like javascript because it is what's known as an ["eager language"](https://en.wikipedia.org/wiki/Eager_evaluation). Because the definition of `value` is a function call to `choice`, the arguments of `choice` must be fully evaluated, and of course none of them are yet. If we just move the definition below `matchNum`, `matchStr`, and `matchArray`, we'll have the same problem with `value` not being defined before `matchArray` wants to use it.
+
+We can get around javascript's eagerness by using [recursiveParser](#recursiveparser), which takes a function that returns a parser:
+
+```javascript
+const value = recursiveParser(() => choice ([
+  matchNum,
+  matchStr,
+  matchArray
+]));
+
+const betweenSquareBrackets = between (char ('[')) (char (']'));
+const commaSeparated = sepBy (char (','));
+
+const matchNum = digits;
+const matchStr = letters;
+const matchArray = betweenSquareBrackets (commaSeparated (value));
+```
