@@ -2,17 +2,19 @@ import {Left, Right} from 'data.either';
 const id = x => x;
 
 // type ParserState a = Either String (Int, String, a)
-// type Parser a b = () => ParserState a -> ParserState b
+// type Parser a b = () -> ParserState a -> ParserState b
 
+//           pipeParsers :: [Parser * *] -> Parser * *
 export const pipeParsers = fns => () => state => {
   return fns.slice(1).reduce((nextState, fn) => fn()(nextState), fns[0]()(state))
 };
 
+//           composeParsers :: [Parser * *] -> Parser * *
 export const composeParsers = fns => () => x => {
   return pipeParsers ([...fns].reverse()) (x);
 };
 
-//           tapParser :: (() => void) -> Parser a a
+//           tapParser :: (a => void) -> Parser a a
 export const tapParser = fn => () => state => {
   fn(state.value);
   return state;
@@ -24,7 +26,7 @@ export const parse = parser => targetString => {
   return parser()(parserState).map(([_, __, result]) => result);
 };
 
-//           many :: Parser a b
+//           many :: Parser a b -> Parser a [b]
 export const many = parser => () => state => {
   return state.chain(innerState => {
     const results = [];
@@ -54,7 +56,7 @@ export const many = parser => () => state => {
   });
 }
 
-//           many1 :: Parser a b
+//           many1 :: Parser a b -> Parser a [b]
 export const many1 = parser => () => state => {
   const res = many (parser) () (state);
   return res.chain(([index, targetString, value]) => {
@@ -232,8 +234,8 @@ export const sequenceOf = parsers => () => state => {
   });
 }
 
-//           sepBy :: Parser a b -> Parser a c -> Parser a [b]
-export const sepBy = valParser => sepParser => () => state => {
+//           sepBy :: Parser a c -> Parser a b -> Parser a [b]
+export const sepBy = sepParser => valParser => () => state => {
   return state.chain(innerState => {
     let nextState = innerState;
     let left = null;
@@ -282,18 +284,18 @@ export const sepBy = valParser => sepParser => () => state => {
   });
 }
 
-//           sepBy1 :: Parser a b -> Parser a c -> Parser a [b]
-export const sepBy1 = valParser => sepParser => () => state => {
+//           sepBy1 :: Parser a c -> Parser a b  -> Parser a [b]
+export const sepBy1 = sepParser => valParser => () => state => {
   const res = sepBy (valParser) (sepParser) () (state);
   return res.chain(([index, targetString, value]) => {
     if (value.length === 0) {
-      return Left (`ParseError 'sepBy1' (position ${i}): Expecting to match at least one separated value`);
+      return Left (`ParseError 'sepBy1' (position ${index}): Expecting to match at least one separated value`);
     }
     return Right ([index, targetString, value]);
   });
 }
 
-//           choice :: [Parser a b] -> Parser a b
+//           choice :: [Parser a *] -> Parser a *
 export const choice = parsers => () => state => {
   return state.chain(([index]) => {
     let match = null;
@@ -392,7 +394,7 @@ export const possibly = parser => () => state => {
   });
 }
 
-//           skip :: Parser a b -> Parser a b
+//           skip :: Parser a b -> Parser a a
 export const skip = parser => () => state => {
   return state.chain(([_, __, value]) => {
     const nextState = parser () (state);
@@ -405,26 +407,19 @@ export const skip = parser => () => state => {
   })
 };
 
-//           whitespace :: Parser a b -> Parser a String
+//           whitespace :: Parser a String
 export const whitespace = pipeParsers ([
-  many (choice ([
-    char (' '),
-    char ('\n'),
-    char ('\t')
-  ])),
+  many (anyOfString (' \n\t\r')),
   mapTo (x => x.join(''))
 ]);
 
 //           recursiveParser :: (() => Parser a b) -> Parser a b
 export const recursiveParser = parserThunk => () => parserThunk()();
 
-//           takeRight :: Parser a b -> Parser a c -> Parser a c
-export const takeRight = lParser => rParser => pipeParsers ([
-  sequenceOf([lParser, rParser]),
-  mapTo (x => x[1])
-]);
+//           takeRight :: Parser a b -> Parser b c -> Parser a c
+export const takeRight = lParser => rParser => pipeParsers ([ lParser, rParser ]);
 
-//           takeLeft :: Parser a b -> Parser a c -> Parser a b
+//           takeLeft :: Parser a b -> Parser b c -> Parser a b
 export const takeLeft = lParser => rParser => pipeParsers ([
   sequenceOf([lParser, rParser]),
   mapTo (x => x[0])
