@@ -282,5 +282,546 @@ The examples are built as es6 modules, which means they need node to be launched
 
 ## API
 
+*Non-essential note on the types:* This documentation using Hindley-Milner type signatures to show the types of function arguments and the return value.
+
+The two main "types" in arcsecond are `Parser a b` and `ParserState a`, which are loosely defined as:
+
+`type ParserState a = Either String (Int, String, a)`
+
+`type Parser a b = () -> ParserState a -> ParserState b`
+
+Which is to say that a `Parser a b` is a type that describes taking a `ParserState a` to a `ParserState b`.
+
+### parse
+
+`parse :: Parser a b -> String -> Either String b`
+
+`parse` takes a parser function and a string, and returns the result of parsing the string using the parser.
+
+**Example**
+```javascript
+parse (str ('hello')) ('hello')
+// -> Either.Right('hello')
+```
+
+### char
+
+`char :: Char -> Parser a String`
+
+`char` takes a character and returns a parser that matches that character **exactly one** time.
+
+**Example**
+```javascript
+parse (c ('h')) ('hello')
+// -> Either.Right('hello')
+```
+
+### str
+
+`str :: String -> Parser a String`
+
+`str` takes a string and returns a parser that matches that string **exactly one** time.
+
+**Example**
+```javascript
+parse (str ('hello')) ('hello world')
+// -> Either.Right('hello')
+```
+
+### digit
+
+`digit :: Parser a String`
+
+`digit` is a parser that matches **exactly one** numerical digit `/[0-9]/`.
+
+**Example**
+```javascript
+parse (digit) ('99 bottles of beer on the wall')
+// -> Either.Right('9')
+```
+
+### digits
+
+`digits :: Parser a String`
+
+`digits` is a parser that matches **one or more** numerical digit `/[0-9]/`.
+
+**Example**
+```javascript
+parse (digits) ('99 bottles of beer on the wall')
+// -> Either.Right('99')
+```
+
+### letter
+
+`letter :: Parser a String`
+
+`letter` is a parser that matches **exactly one** alphabetical letter `/[a-zA-Z]/`.
+
+**Example**
+```javascript
+parse (letter) ('hello world')
+// -> Either.Right('h')
+```
+
+### letters
+
+`letters :: Parser a String`
+
+`letters` is a parser that matches **one or more** alphabetical letter `/[a-zA-Z]/`.
+
+**Example**
+```javascript
+parse (letters) ('hello world')
+// -> Either.Right('hello')
+```
+
+### whitespace
+
+`whitespace :: Parser a String`
+
+`whitespace` is a parser that matches **zero or more** whitespace characters.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  str ('hello'),
+  whitespace,
+  str ('world')
+]);
+
+parse (newParser) ('hello           world')
+// -> Either.Right([ 'hello', '           ', 'world' ])
+
+parse (newParser) ('helloworld')
+// -> Either.Right([ 'hello', '', 'world' ])
+```
+
+### anyOfString
+
+`anyOfString :: String -> Parser a String`
+
+`anyOfString` takes a string and returns a parser that matches **exactly one** character from that string.
+
+**Example**
+```javascript
+parse (anyOfString ('hello')) ('hello world')
+// -> Either.Right('h')
+```
+
+### sequenceOf
+
+`sequenceOf :: [Parser * *] -> Parser a [*]`
+
+`sequenceOf` takes an array of parsers, and returns a new parser that matches each of them sequentially, collecting up the results into an array.
+
+**Example**
+```javascript
+const newParser = sequenceOf([
+  str ('he'),
+  letters,
+  char (' '),
+  str ('world'),
+])
+
+parse (newParser) ('hello world')
+// -> Either.Right([ 'he', 'llo', ' ', 'world' ])
+```
+
+### namedSequenceOf
+
+`namedSequenceOf :: [[String, Parser * *]] -> Parser a Object`
+
+`namedSequenceOf` takes an array of string/parser pairs, and returns a new parser that matches each of them sequentially, collecting up the results into an object where the key is the string in the pair.
+
+A pair is just an array in the form: `[string, parser]`
+
+**Example**
+```javascript
+const newParser = namedSequenceOf([
+  ['firstPart', str ('he')],
+  ['secondPart', letters],
+  ['thirdPart', char (' ')],
+  ['forthPart', str ('world')],
+])
+
+parse (newParser) ('hello world')
+// -> Either.Right({
+//      firstPart: 'he',
+//      secondPart: 'llo',
+//      thirdPart: ' ',
+//      forthPart: 'world'
+//    })
+```
+
+### choice
+
+`choice :: [Parser a *] -> Parser a *`
+
+`choice` takes an array of parsers, and returns a new parser that tries to match each one of them sequentially, and returns the first match.
+
+**Example**
+```javascript
+const newParser = choice([
+  digit,
+  char ('!'),
+  str ('hello'),
+  str ('pineapple')
+])
+
+parse (newParser) ('hello world')
+// -> Either.Right('hello')
+```
+
+### sepBy
+
+`sepBy :: Parser a c -> Parser a b -> Parser a [b]`
+
+`sepBy` takes two parsers - a *separator* parser and a *value* parser - and returns a new parser that matches **zero or more** values from the *value* parser that are separated by values of the *separator* parser. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
+
+**Example**
+```javascript
+const newParser = sepBy (char (',')) (letters)
+
+parse (newParser) ('some,comma,separated,words')
+// -> Either.Right([ 'some', 'comma', 'separated', 'words' ])
+
+parse (newParser) ('')
+// -> Either.Right([])
+
+parse (newParser) ('12345')
+// -> Either.Right([])
+```
+
+### sepBy1
+
+`sepBy1 :: Parser a c -> Parser a b -> Parser a [b]`
+
+`sepBy1` is the same as `sepBy`, except that it matches **one or more** occurence.
+
+**Example**
+```javascript
+const newParser = sepBy1 (char (',')) (letters)
+
+parse (newParser) ('some,comma,separated,words')
+// -> Either.Right([ 'some', 'comma', 'separated', 'words' ])
+
+parse (newParser) ('1,2,3')
+// -> Either.Left('ParseError \'sepBy1\' (position 0): Expecting to match at least one separated value')
+```
+
+### many
+
+`many :: Parser a b -> Parser a [b]`
+
+`many` takes a parser and returns a new parser which matches that parser **zero or more** times. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
+
+**Example**
+```javascript
+const newParser = many (str ('abc'))
+
+parse (newParser) ('abcabcabcabc')
+// -> Either.Right([ 'abc', 'abc', 'abc', 'abc' ])
+
+parse (newParser) ('')
+// -> Either.Right([])
+
+parse (newParser) ('12345')
+// -> Either.Right([])
+```
+
+### many1
+
+`many1 :: Parser a b -> Parser a [b]`
+
+`many1` is the same as `many`, except that it matches **one or more** occurence.
+
+**Example**
+```javascript
+const newParser = many (str ('abc'))
+
+parse (newParser) ('abcabcabcabc')
+// -> Either.Right([ 'abc', 'abc', 'abc', 'abc' ])
+
+parse (newParser) ('')
+// -> Either.Left('ParseError \'many1\' (position 0): Expecting to match at least one value')
+
+parse (newParser) ('12345')
+// -> Either.Left('ParseError \'many1\' (position 0): Expecting to match at least one value')
+```
+
+
+
+### between
+
+`between :: between :: Parser a b -> Parser a c -> Parser a d -> Parser a d`
+
+`between` takes 3 parsers, a *left* parser, a *right* parser, and a *value* parser, returning a new parser that matches a value matched by the *value* parser, between values matched by the *left* parser and the *right* parser.
+
+This parser can easily be partially applied with `char ('(')` and `char (')')` to create a `betweenBrackets` parser, for example.
+
+**Example**
+```javascript
+const newParser = between (char ('<')) (char ('>')) (letters);
+
+parse (newParser) ('<hello>')
+// -> Either.Right('hello')
+
+const betweenBrackets = between (char ('(')) (char (')'));
+
+parse (betweenBrackets (many (letters))) ('(hello world)')
+// -> Either.Right([ 'hello', 'world' ])
+```
+
+
+### everythingUntil
+
+`everythingUntil :: Parser a b -> Parser a c`
+
+`everythingUntil` takes a *termination* parser and returns a new parser which matches everything up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
+
+**Example**
+```javascript
+parse (everythingUntil (char ('.'))) ('This is a sentence.This is another sentence')
+// -> Either.Right('This is a sentence')
+
+// termination parser doesn't consume the termination value
+const newParser = sequenceOf ([
+  everythingUntil (char ('.')),
+  str ('This is another sentence')
+]);
+
+
+parse (newParser) ('This is a sentence.This is another sentence')
+// -> Either.Left('ParseError (position 18): Expecting string \'This is another sentence\', got \'.This is another sentenc...\'')
+```
+
+### anythingExcept
+
+`anythingExcept :: Parser a b -> Parser a c`
+
+`anythingExcept` takes a *exception* parser and returns a new parser which matches **exactly one** character, if it is not matched by the *exception* parser.
+
+**Example**
+```javascript
+parse (anythingExcept (char ('.'))) ('This is a sentence.')
+// -> Either.Right('T')
+
+const manyExceptDot = many (anythingExcept (char ('.')))
+parse (manyExceptDot) ('This is a sentence.')
+// -> Either.Right([ 'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's', 'e', 'n', 't', 'e', 'n', 'c', 'e' ])
+```
+
+### possibly
+
+`possibly :: Parser a b -> Parser a (b|null)`
+
+`possibly` takes an *attempt* parser and returns a new parser which tries to match using the *attempt* parser. If it is unsuccessful, it returns a null value and does not "consume" any input.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  possibly (str ('Not Here')),
+  str ('Yep I am here')
+]);
+
+parse (newParser) ('Yep I am here')
+// -> Either.Right([ null, 'Yep I am here' ])
+```
+
+### skip
+
+`skip :: Parser a b -> Parser a a`
+
+`skip` takes a *skip* parser and returns a new parser which matches using the *skip* parser, but doesn't return its value, but instead the value of whatever came before it.
+
+**Example**
+```javascript
+const newParser = pipeParsers ([
+  str ('abc'),
+  str('123'),
+  skip (str ('def'))
+])
+
+parse (newParser) ('abc123def')
+// -> Either.Right('123')
+```
+
+### pipeParsers
+
+`pipeParsers :: [Parser * *] -> Parser * *`
+
+`pipeParsers` takes an array of parsers and composes them left to right, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
+
+**Example**
+```javascript
+const newParser = pipeParsers ([
+  str ('hello'),
+  char (' '),
+  str ('world')
+]);
+
+parse (newParser) ('hello world')
+// -> Either.Right('world')
+```
+
+### composeParsers
+
+`composeParsers :: [Parser * *] -> Parser * *`
+
+`composeParsers` takes an array of parsers and composes them right to left, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
+
+**Example**
+```javascript
+const newParser = composeParsers ([
+  str ('world'),
+  char (' '),
+  str ('hello')
+]);
+
+parse (newParser) ('hello world')
+// -> Either.Right('world')
+```
+
+### takeRight
+
+`takeRight :: Parser a b -> Parser b c -> Parser a c`
+
+`takeRight` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *right*.
+
+**Example**
+```javascript
+const newParser = takeRight (str ('hello ')) (str ('world'))
+
+parse (newParser) ('hello world')
+// -> Either.Right('world')
+```
+
+### takeLeft
+
+`takeLeft :: Parser a b -> Parser b c -> Parser a b`
+
+`takeLeft` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *left*.
+
+**Example**
+```javascript
+const newParser = takeLeft (str ('hello ')) (str ('world'))
+
+parse (newParser) ('hello world')
+// -> Either.Right('hello ')
+```
+
+### recursiveParser
+
+`recursiveParser :: (() => Parser a b) -> Parser a b`
+
+`recursiveParser` takes a function that returns a parser (a thunk), and returns that same parser. This is needed in order to create *recursive parsers* because javascript is not a "lazy" language.
+
+In the following example both the `value` parser and the `matchArray` parser are defined in terms of each other, so one must be one **must** be defined using `recursiveParser`.
+
+**Example**
+```javascript
+const value = recursiveParser (() => choice ([
+  matchNum,
+  matchStr,
+  matchArray
+]));
+
+const betweenSquareBrackets = between (char ('[')) (char (']'));
+const commaSeparated = sepBy (char (','));
+const spaceSeparated = sepBy (char (' '));
+
+const matchNum = digits;
+const matchStr = letters;
+const matchArray = betweenSquareBrackets (commaSeparated (value))
+
+parse (spaceSeparated (value)) ('abc 123 [42,somethingelse] 45')
+// -> Either.Right([ 'abc', '123', [ '42', 'somethingelse' ], '45' ])
+```
+
+### tapParser
+
+`tapParser :: (a => void) -> Parser a a`
+
+`tapParser` takes a function and returns a parser that does nothing and consumes no input, but runs the provided function on the last parsed value. This is intended as a debugging tool to see the state of parsing at any point in a sequential operation like `sequenceOf` or `pipeParsers`.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  letters,
+  tapParser(console.log),
+  char (' '),
+  letters
+]);
+
+parse (newParser) ('hello world')
+// -> [console.log]: 'hello'
+// -> Either.Right([ 'hello', ' ', 'world' ])
+```
+
+### mapTo
+
+`mapTo :: (a -> b) -> Parser a b`
+
+`tapParser` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
+
+**Example**
+```javascript
+const newParser = pipeParsers([
+  letters,
+  mapTo(x => {
+    return {
+      matchType: 'string',
+      value: x
+    }
+  });
+]);
+
+parse (newParser) ('hello world')
+// -> Either.Right({
+//      matchType: 'string',
+//      value: 'hello'
+//    })
+```
+
+### toPromise
+
+`toPromise :: Either a b -> Promise a b`
+
+`toPromise` converts an `Either` type value (such as the one returned by `parse`), and converts it into a `Promise`.
+
+**Example**
+```javascript
+const resultAsEither = parse (str ('hello')) ('hello world');
+const resultAsPromise = toPromise(resultAsEither);
+
+resultAsPromise
+  .then(console.log)
+  .catch(console.error);
+// -> 'hello'
+```
+
+### toValue
+
+`toValue :: Either a b -> b`
+
+`toValue` converts an `Either` type value (such as the one returned by `parse`), and converts it into a regular value. If there was a parsing error, it will be thrown, and must be handled in a try/catch block.
+
+**Example**
+```javascript
+const resultAsEither = parse (str ('hello')) ('hello world');
+
+try {
+  const value = toValue(resultAsEither);
+} catch (parseError) {
+  console.error(parseError.message)
+}
+
+resultAsPromise
+  .then(console.log)
+  .catch(console.error);
+// -> 'hello'
+```
+
 ## Recursive Grammars
 
