@@ -2,10 +2,13 @@
   "name": "arcsecond",
   "version": "0.0.1",
   "description": "",
-  "main": "index.mjs",
+  "main": "index",
+  "module": "index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "repl": "node -r esm"
+    "repl": "node -r esm",
+    "build": "babel index.mjs -o index.js",
+    "publish": "npm run build && npm publish"
   },
   "author": "",
   "license": "MIT",
@@ -14,6 +17,8 @@
     "esm": "^3.0.84"
   },
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "daggy": "^1.3.0"
   }
 }
