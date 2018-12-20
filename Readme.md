@@ -2,50 +2,54 @@
 
 Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
-The name is also derrived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
+---
 
-* [Introduction](#introduction)
-    * [A simple parser](#a-simple-parser)
-    * [Improving the simple parser](#improving-the-simple-parser)
-    * [Note on currying](#note-on-currying)
-    * [Note on error handling](#note-on-error-handling)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Running the examples](#running-the-examples)
-* [API](#api)
-    * [parse](#parse)
-    * [char](#char)
-    * [str](#str)
-    * [digit](#digit)
-    * [digits](#digits)
-    * [letter](#letter)
-    * [letters](#letters)
-    * [whitespace](#whitespace)
-    * [anyOfString](#anyofstring)
-    * [regex](#regex)
-    * [sequenceOf](#sequenceof)
-    * [namedSequenceOf](#namedsequenceof)
-    * [choice](#choice)
-    * [lookAhead](#lookAhead)
-    * [sepBy](#sepby)
-    * [sepBy1](#sepby1)
-    * [many](#many)
-    * [many1](#many1)
-    * [between](#between)
-    * [everythingUntil](#everythinguntil)
-    * [anythingExcept](#anythingexcept)
-    * [possibly](#possibly)
-    * [skip](#skip)
-    * [pipeParsers](#pipeparsers)
-    * [composeParsers](#composeparsers)
-    * [takeRight](#takeright)
-    * [takeLeft](#takeleft)
-    * [recursiveParser](#recursiveparser)
-    * [tapParser](#tapparser)
-    * [mapTo](#mapto)
-    * [toPromise](#topromise)
-    * [toValue](#tovalue)
-* [A note on recursive grammars](#a-note-on-recursive-grammars)
+- [1. Introduction](#introduction)
+  - [1.1 A simple parser](#a-simple-parser)
+  - [1.2 Improving the simple parser](#improving-the-simple-parser)
+  - [1.3 Note on currying](#note-on-currying)
+  - [1.4 Note on error handling](#note-on-error-handling)
+- [2. Installation](#installation)
+- [3. Usage](#usage)
+- [4. Running the examples](#running-the-examples)
+- [5. API](#api)
+  - [5.1 parse](#parse)
+  - [5.2 char](#char)
+  - [5.3 str](#str)
+  - [5.4 digit](#digit)
+  - [5.5 digits](#digits)
+  - [5.6 letter](#letter)
+  - [5.7 letters](#letters)
+  - [5.8 whitespace](#whitespace)
+  - [5.9 anyOfString](#anyofstring)
+  - [5.10 regex](#regex)
+  - [5.11 sequenceOf](#sequenceof)
+  - [5.12 namedSequenceOf](#namedsequenceof)
+  - [5.13 choice](#choice)
+  - [5.14 lookAhead](#lookahead)
+  - [5.15 sepBy](#sepby)
+  - [5.16 sepBy1](#sepby1)
+  - [5.17 many](#many)
+  - [5.18 many1](#many1)
+  - [5.19 between](#between)
+  - [5.20 everythingUntil](#everythinguntil)
+  - [5.21 anythingExcept](#anythingexcept)
+  - [5.22 possibly](#possibly)
+  - [5.23 skip](#skip)
+  - [5.24 pipeParsers](#pipeparsers)
+  - [5.25 composeParsers](#composeparsers)
+  - [5.26 takeRight](#takeright)
+  - [5.27 takeLeft](#takeleft)
+  - [5.28 recursiveParser](#recursiveparser)
+  - [5.29 tapParser](#tapparser)
+  - [5.30 chainParser](#chainparser)
+  - [5.31 mapTo](#mapto)
+  - [5.32 fail](#fail)
+  - [5.33 toPromise](#topromise)
+  - [5.34 toValue](#tovalue)
+- [6. A note on recursive grammars](#a-note-on-recursive-grammars)
+- [7. Name](#name)
+
 
 ## Introduction
 
@@ -833,11 +837,41 @@ parse (newParser) ('hello world')
 // -> Either.Right([ 'hello', ' ', 'world' ])
 ```
 
+### chainParser
+
+`chainParser :: (a -> Parser b c) -> Parser b c`
+
+`chainParser` takes a function that recieves the last matched value and returns a new parser.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  letters,
+  skip (char (' ')),
+  chainParser (v => {
+    switch (v) {
+      case 'asLetters': return letters;
+      case 'asDigits': return digits;
+      default: return fail(`Unrecognised signifier '${v}'`);
+    }
+  })
+]);
+
+parse (newParser) ('asDigits 1234')
+// -> Either.Right([ 'asDigits', 'asDigits', '1234' ])
+
+parse (newParser) ('asLetters hello')
+// -> Either.Right([ 'asLetters', 'asLetters', 'hello' ])
+
+parse (newParser) ('asPineapple wayoh')
+// -> Either.Left('Unrecognised signifier \'asPineapple\'')
+```
+
 ### mapTo
 
 `mapTo :: (a -> b) -> Parser a b`
 
-`tapParser` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
+`mapTo` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
 
 **Example**
 ```javascript
@@ -856,6 +890,18 @@ parse (newParser) ('hello world')
 //      matchType: 'string',
 //      value: 'hello'
 //    })
+```
+
+### fail
+
+`fail :: String -> Parser a b`
+
+`fail` takes an *error message* string and returns a parser that always fails with the provided *error message*.
+
+**Example**
+```javascript
+parse (fail ('Nope')) ('hello world')
+// -> Either.Left('Nope')
 ```
 
 ### toPromise
@@ -934,3 +980,7 @@ const matchNum = digits;
 const matchStr = letters;
 const matchArray = betweenSquareBrackets (commaSeparated (value));
 ```
+
+## Name
+
+The name is also derrived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).

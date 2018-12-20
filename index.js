@@ -26,6 +26,19 @@ export const parse = parser => targetString => {
   return parser()(parserState).map(([_, __, result]) => result);
 };
 
+//           chainParser :: (a -> Parser b c) -> Parser b c
+export const chainParser = fn => () => state => {
+  return state.chain(([_, __, v]) => {
+    const parser = fn(v);
+    return parser()(state);
+  });
+};
+
+//           fail :: String -> Parser a b
+export const fail = errorMessage => () => _ => {
+  return Left (errorMessage);
+};
+
 //           many :: Parser a b -> Parser a [b]
 export const many = parser => () => state => {
   return state.chain(innerState => {
