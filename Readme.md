@@ -22,9 +22,11 @@ The name is also derrived from parsec, which in astronomical terms is an ["astro
     * [letters](#letters)
     * [whitespace](#whitespace)
     * [anyOfString](#anyofstring)
+    * [regex](#regex)
     * [sequenceOf](#sequenceof)
     * [namedSequenceOf](#namedsequenceof)
     * [choice](#choice)
+    * [lookAhead](#lookAhead)
     * [sepBy](#sepby)
     * [sepBy1](#sepby1)
     * [many](#many)
@@ -450,6 +452,18 @@ parse (anyOfString ('aeiou')) ('unusual string')
 // -> Either.Right('u')
 ```
 
+### regex
+
+`regex :: RegExp -> Parser a String`
+
+`regex` takes a RegExp and returns a parser that matches **as many characters** as the RegExp matches.
+
+**Example**
+```javascript
+parse (regex (/[hH][aeiou].{2}o/)) ('hello world')
+// -> Either.Right('hello')
+```
+
 ### sequenceOf
 
 `sequenceOf :: [Parser * *] -> Parser a [*]`
@@ -458,7 +472,7 @@ parse (anyOfString ('aeiou')) ('unusual string')
 
 **Example**
 ```javascript
-const newParser = sequenceOf([
+const newParser = sequenceOf ([
   str ('he'),
   letters,
   char (' '),
@@ -479,7 +493,7 @@ A pair is just an array in the form: `[string, parser]`
 
 **Example**
 ```javascript
-const newParser = namedSequenceOf([
+const newParser = namedSequenceOf ([
   ['firstPart', str ('he')],
   ['secondPart', letters],
   ['thirdPart', char (' ')],
@@ -503,7 +517,7 @@ parse (newParser) ('hello world')
 
 **Example**
 ```javascript
-const newParser = choice([
+const newParser = choice ([
   digit,
   char ('!'),
   str ('hello'),
@@ -512,6 +526,25 @@ const newParser = choice([
 
 parse (newParser) ('hello world')
 // -> Either.Right('hello')
+```
+
+
+### lookAhead
+
+`lookAhead :: Parser a b -> Parser a b`
+
+`lookAhead` takes *look ahead* parser, and returns a new parser that matches using the *look ahead* parser, but without consuming input.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  str ('hello '),
+  lookAhead (str ('world')),
+  str ('wor')
+]);
+
+parse (newParser) ('hello world')
+// -> Either.Right([ 'hello ', 'world', 'wor' ])
 ```
 
 ### sepBy

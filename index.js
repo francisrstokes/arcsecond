@@ -112,6 +112,28 @@ export const str = s => () => state => {
   });
 };
 
+//           regex :: RegExp -> Parser a String
+export const regex = re => () => state => {
+  const typeofre = Object.prototype.toString.call(re);
+  if (typeofre !== '[object RegExp]') {
+    throw new TypeError (`regex must be called with a Regular Expression, but got ${typeofre}`);
+  }
+
+  return state.chain(([index, targetString]) => {
+    const rest = targetString.slice(index);
+    if (rest.length >= 1) {
+      const match = rest.match(re);
+      if (match) {
+        return Right ([index + match[0].length, targetString, match[0]]);
+      } else {
+        return Left (`ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(0, 5)}...'`);
+      }
+    }
+    return Left (`ParseError (position ${index}): Expecting string matching '${re}', but got end of input.`);
+  });
+};
+
+
 //           digit :: Parser a String
 export const digit = () => state => {
   return state.chain(([index, targetString]) => {
@@ -302,11 +324,12 @@ export const choice = parsers => () => state => {
     for (const parser of parsers) {
       let exit = false;
       const out = parser () (state);
+
       out.cata({
         Left: id,
         Right: x => {
           exit = true;
-          match = Right (x);
+          match = Right(x);
         }
       });
 
@@ -355,7 +378,7 @@ export const everythingUntil = parser => () => state => {
             exit = true;
           }
         },
-        Right: x => {
+        Right: () => {
           exit = true;
         }
       });
@@ -383,6 +406,14 @@ export const anythingExcept = parser => () => state => {
   })
 }
 
+//           lookAhead :: Parser a b -> Parser a b
+export const lookAhead = parser => () => state => {
+  return state.chain(([i, s]) => {
+    const nextState = parser () (state);
+    return nextState.map(([_, __, v]) => [i, s, v]);
+  });
+};
+
 //           possibly :: Parser a b -> Parser a (b|null)
 export const possibly = parser => () => state => {
   return state.chain(([i, s]) => {
@@ -398,13 +429,8 @@ export const possibly = parser => () => state => {
 export const skip = parser => () => state => {
   return state.chain(([_, __, value]) => {
     const nextState = parser () (state);
-    return nextState.cata ({
-      Left: id,
-      Right: ([i, s]) => {
-        return Right ([i, s, value])
-      }
-    });
-  })
+    return nextState.map (([i, s]) => [i, s, value]);
+  });
 };
 
 //           whitespace :: Parser a String
