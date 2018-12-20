@@ -42,7 +42,7 @@ Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Pars
   - [5.27 takeLeft](#takeleft)
   - [5.28 recursiveParser](#recursiveparser)
   - [5.29 tapParser](#tapparser)
-  - [5.30 chainParser](#chainparser)
+  - [5.30 decide](#decide)
   - [5.31 mapTo](#mapto)
   - [5.32 fail](#fail)
   - [5.33 toPromise](#topromise)
@@ -837,18 +837,19 @@ parse (newParser) ('hello world')
 // -> Either.Right([ 'hello', ' ', 'world' ])
 ```
 
-### chainParser
+### decide
 
-`chainParser :: (a -> Parser b c) -> Parser b c`
+`decide :: (a -> Parser b c) -> Parser b c`
 
-`chainParser` takes a function that recieves the last matched value and returns a new parser.
+`decide` takes a function that recieves the last matched value and returns a new parser. It's important that the function **always** returns a parser. If a valid one cannot be selected, you can always use [fail](#fail).
+
+`decide` allows an author to create a [context-sensitive grammar](https://en.wikipedia.org/wiki/Context-sensitive_grammar).
 
 **Example**
 ```javascript
 const newParser = sequenceOf ([
-  letters,
-  skip (char (' ')),
-  chainParser (v => {
+  takeLeft (letters) (char (' ')),
+  decide (v => {
     switch (v) {
       case 'asLetters': return letters;
       case 'asDigits': return digits;
@@ -858,10 +859,10 @@ const newParser = sequenceOf ([
 ]);
 
 parse (newParser) ('asDigits 1234')
-// -> Either.Right([ 'asDigits', 'asDigits', '1234' ])
+// -> Either.Right([ 'asDigits', '1234' ])
 
 parse (newParser) ('asLetters hello')
-// -> Either.Right([ 'asLetters', 'asLetters', 'hello' ])
+// -> Either.Right([ 'asLetters', 'hello' ])
 
 parse (newParser) ('asPineapple wayoh')
 // -> Either.Left('Unrecognised signifier \'asPineapple\'')

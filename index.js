@@ -26,8 +26,8 @@ export const parse = parser => targetString => {
   return parser()(parserState).map(([_, __, result]) => result);
 };
 
-//           chainParser :: (a -> Parser b c) -> Parser b c
-export const chainParser = fn => () => state => {
+//           decide :: (a -> Parser b c) -> Parser b c
+export const decide = fn => () => state => {
   return state.chain(([_, __, v]) => {
     const parser = fn(v);
     return parser()(state);
