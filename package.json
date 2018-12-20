@@ -7,8 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "repl": "node -r esm",
-    "build": "babel index.mjs -o index.js",
-    "publish": "npm run build && npm publish"
+    "build": "babel index.mjs -o index.js"
   },
   "author": "",
   "license": "MIT",
