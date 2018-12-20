@@ -1,4 +1,5 @@
 const {
+  Parser,
   parse,
   char,
   str,
@@ -32,7 +33,8 @@ const {
   decide,
   mapTo,
   toPromise,
-  toValue
+  toValue,
+  succeedWith
 } = require('../index')
 
 const {Left,Right} = require('data.either');
@@ -72,6 +74,11 @@ testMany.only = (msg, testFns) => {
     test(msg, () => testFns.forEach(fn => fn()));
   })
 }
+
+test(
+  'Parser',
+  expectedSuccessTest (Parser, null, 'something')
+);
 
 testMany(
   'char', [
@@ -131,6 +138,14 @@ testMany(
     expectedFailTest(fail('nope'), 'abc123'),
     expectedFailTest(fail('nope'), ''),
     expectedFailTest(fail('nope'), '12435'),
+  ]
+);
+
+testMany(
+  'succeedWith', [
+    expectedSuccessTest(succeedWith('yes'), 'yes', 'abc123'),
+    expectedSuccessTest(succeedWith('yes'), 'yes', ''),
+    expectedSuccessTest(succeedWith('yes'), 'yes', '12435'),
   ]
 );
 
@@ -583,3 +598,70 @@ test('toValue', () => {
     expect(x).toBe('oh yes');
   }).not.toThrow()
 });
+
+test('map (equivalence to mapTo)', () => {
+  const testStr = 'hello';
+  const fn = x => ({ value: x })
+
+  const successMap = letters.map(fn);
+  const successMapTo = pipeParsers ([ letters, mapTo (fn) ]);
+
+  const failMap = fail('nope').map(fn);
+  const failMapTo = pipeParsers ([ fail('nope'), mapTo (fn) ]);
+
+  expect(parse (successMap) (testStr)).toEqual(parse (successMapTo) (testStr));
+  expect(parse (failMap) (testStr)).toEqual(parse (failMapTo) (testStr));
+});
+
+test('chain (equivalence to decide)', () => {
+  const testStr1 = 'num 42';
+  const testStr2 = 'num 42';
+  const testStr3 = 'num 42';
+
+  const fn = x => {
+    if (x === 'num ') {
+      return digits;
+    } else if (x == 'str ') {
+      return letters;
+    } else {
+      return fail ('nope');
+    }
+  };
+
+  const lettersSpace = takeLeft (letters) (whitespace);
+
+  const successChain = lettersSpace.chain(fn);
+  const successDecide = pipeParsers ([ lettersSpace, decide (fn) ]);
+  const failChain = fail('nope').chain(fn);
+  const failDecide = pipeParsers ([ fail('nope'), decide (fn) ]);
+
+  expect(parse (successChain) (testStr1)).toEqual(parse (successDecide) (testStr1));
+  expect(parse (failChain) (testStr1)).toEqual(parse (failDecide) (testStr1));
+
+  expect(parse (successChain) (testStr2)).toEqual(parse (successDecide) (testStr2));
+  expect(parse (failChain) (testStr2)).toEqual(parse (failDecide) (testStr2));
+
+  expect(parse (successChain) (testStr3)).toEqual(parse (successDecide) (testStr3));
+  expect(parse (failChain) (testStr3)).toEqual(parse (failDecide) (testStr3));
+});
+
+test('ap (equivalence to ...)', () => {
+  const testStr = 'hello';
+  const fn = x => ({ value: x })
+
+  const sNonAp = pipeParsers ([
+    sequenceOf ([ succeedWith (fn), letters ]),
+    mapTo (([fn, x]) => fn(x))
+  ]);
+  const sAp = letters.ap(Parser.of(fn));
+
+  const fNonAp = takeRight (fail('nope')) (pipeParsers ([
+    sequenceOf ([ succeedWith (fn), letters ]),
+    mapTo (([fn, x]) => fn(x))
+  ]));
+  const fAp = takeRight (fail('nope')) (letters.ap(Parser.of(fn)));
+
+  expect(parse (sNonAp) (testStr)).toEqual(parse (sAp) (testStr));
+  expect(parse (fNonAp) (testStr)).toEqual(parse (fAp) (testStr));
+});
+
