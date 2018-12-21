@@ -11,7 +11,7 @@ export const pipeParsers = fns => () => state => {
 
 //           composeParsers :: [Parser * *] -> Parser * *
 export const composeParsers = fns => () => x => {
-  return pipeParsers ([...fns].reverse()) (x);
+  return pipeParsers ([...fns].reverse()) () (x);
 };
 
 //           tapParser :: (a => void) -> Parser a a
@@ -126,27 +126,31 @@ export const str = s => () => state => {
 };
 
 //           regex :: RegExp -> Parser a String
-export const regex = re => () => state => {
+export const regex = re => {
   const typeofre = Object.prototype.toString.call(re);
   if (typeofre !== '[object RegExp]') {
     throw new TypeError (`regex must be called with a Regular Expression, but got ${typeofre}`);
   }
 
-  return state.chain(([index, targetString]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      const match = rest.match(re);
-      if (match) {
-        return Right ([index + match[0].length, targetString, match[0]]);
-      } else {
-        return Left (`ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(0, 5)}...'`);
+  if (re.toString()[1] !== '^') {
+    throw new Error(`regex parsers must contain '^' start assertion.`)
+  }
+
+  return () => state => {
+    return state.chain(([index, targetString]) => {
+      const rest = targetString.slice(index);
+      if (rest.length >= 1) {
+        const match = rest.match(re);
+        if (match) {
+          return Right ([index + match[0].length, targetString, match[0]]);
+        } else {
+          return Left (`ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(0, 5)}...'`);
+        }
       }
-    }
-    return Left (`ParseError (position ${index}): Expecting string matching '${re}', but got end of input.`);
-  });
-};
-
-
+      return Left (`ParseError (position ${index}): Expecting string matching '${re}', but got end of input.`);
+    });
+  };
+}
 //           digit :: Parser a String
 export const digit = () => state => {
   return state.chain(([index, targetString]) => {
@@ -321,7 +325,7 @@ export const sepBy = sepParser => valParser => () => state => {
 
 //           sepBy1 :: Parser a c -> Parser a b  -> Parser a [b]
 export const sepBy1 = sepParser => valParser => () => state => {
-  const res = sepBy (valParser) (sepParser) () (state);
+  const res = sepBy (sepParser) (valParser) () (state);
   return res.chain(([index, targetString, value]) => {
     if (value.length === 0) {
       return Left (`ParseError 'sepBy1' (position ${index}): Expecting to match at least one separated value`);
