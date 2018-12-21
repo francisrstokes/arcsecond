@@ -1,6 +1,6 @@
 {
   "name": "arcsecond",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "",
   "main": "index",
   "module": "index.mjs",
