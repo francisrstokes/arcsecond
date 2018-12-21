@@ -1,6 +1,6 @@
 {
   "name": "arcsecond",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "",
   "main": "index",
   "module": "index.mjs",
@@ -11,7 +11,7 @@
     "build": "babel index.mjs -o index.js"
   },
   "jest": {
-    "transform":{}
+    "transform": {}
   },
   "author": "",
   "license": "MIT",
