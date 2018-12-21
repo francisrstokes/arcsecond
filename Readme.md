@@ -1,6 +1,6 @@
 # Arcsecond
 
-Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
+Arcsecond is a Fantasy Land compliant javascript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
 ---
 
@@ -45,10 +45,17 @@ Arcsecond is a javascript [Parser Combinator](https://en.wikipedia.org/wiki/Pars
   - [5.30 decide](#decide)
   - [5.31 mapTo](#mapto)
   - [5.32 fail](#fail)
-  - [5.33 toPromise](#topromise)
-  - [5.34 toValue](#tovalue)
+  - [5.33 succeedWith](#succeedwith)
+  - [5.34 toPromise](#topromise)
+  - [5.35 toValue](#tovalue)
 - [6. A note on recursive grammars](#a-note-on-recursive-grammars)
-- [7. Name](#name)
+- [7. Fantasy Land](#fantasy-land)
+  - [7.1 Equivalent Operations](#equivalent-operations)
+    - [7.1.1 of](#of)
+    - [7.1.2 map](#map)
+    - [7.1.3 chain](#chain)
+    - [7.1.4 ap](#ap)
+- [8. Name](#name)
 
 
 ## Introduction
@@ -905,6 +912,18 @@ parse (fail ('Nope')) ('hello world')
 // -> Either.Left('Nope')
 ```
 
+### succeedWith
+
+`succeedWith :: b -> Parser a b`
+
+`succeedWith` takes an value and returns a parser that always matches that value and does not consume any input.
+
+**Example**
+```javascript
+parse (succeedWith ('anything')) ('hello world')
+// -> Either.Right('anything')
+```
+
 ### toPromise
 
 `toPromise :: Either a b -> Promise a b`
@@ -980,6 +999,62 @@ const commaSeparated = sepBy (char (','));
 const matchNum = digits;
 const matchStr = letters;
 const matchArray = betweenSquareBrackets (commaSeparated (value));
+```
+
+## Fantasy Land
+
+This library implements the following Fantasy Land (v3) interfaces:
+
+- [Functor](https://github.com/fantasyland/fantasy-land#functor)
+- [Apply](https://github.com/fantasyland/fantasy-land#apply)
+- [Applicative](https://github.com/fantasyland/fantasy-land#applicative)
+- [Chain](https://github.com/fantasyland/fantasy-land#chain)
+
+Every parser, or parser made from composing parsers has a `.of`, `.map`, `.chain`, and `.ap` method.
+
+### Equivalent Operations
+
+#### of
+
+```javascript
+Parser.of(42)
+
+// is equivalent to
+
+succeedWith (42)
+```
+
+#### map
+
+```javascript
+letters.map (fn)
+
+// is equivalent to
+
+pipeParsers ([ letters, mapTo (fn) ])
+```
+
+#### chain
+
+```javascript
+letters.chain (x => someOtherParser)
+
+// is equivalent to
+
+pipeParsers ([ letters, decide (x => someOtherParser) ])
+```
+
+#### ap
+
+```javascript
+letters.ap (Parser.of (fn))
+
+// is equivalent to
+
+pipeParsers ([
+  sequenceOf ([ succeedWith (fn), letters ]),
+  mapTo (([fn, x]) => fn(x))
+]);
 ```
 
 ## Name
