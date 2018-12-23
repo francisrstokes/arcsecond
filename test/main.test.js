@@ -39,6 +39,28 @@ const {
 
 const {Left,Right} = require('data.either');
 
+const f = x => ({ f: x });
+const g = x => ({ g: x });
+
+const expectEquivalence = (parserA, parserB) => () => {
+  const strings = [
+    'hello world',
+    'hello1234a',
+    '',
+    '12345 325vfs43',
+    '!@#$%^',
+    '≈ç√∫˜µ hgello skajb'
+  ];
+
+  strings.forEach(s => {
+    expect(
+      parse(parserA)(s)
+    ).toEqual(
+      parse(parserB)(s)
+    )
+  });
+};
+
 const failLeft = () => {
   throw new Error ('Expected a Right')
 };
@@ -609,9 +631,20 @@ test('map (equivalence to mapTo)', () => {
   const failMap = fail('nope').map(fn);
   const failMapTo = pipeParsers ([ fail('nope'), mapTo (fn) ]);
 
-  expect(parse (successMap) (testStr)).toEqual(parse (successMapTo) (testStr));
-  expect(parse (failMap) (testStr)).toEqual(parse (failMapTo) (testStr));
+  expectEquivalence(successMap, successMapTo)();
+  expectEquivalence(failMap, failMapTo)();
 });
+
+testMany('map (laws)', [
+  expectEquivalence(
+    letters.map(x => x),
+    letters
+    ),
+    expectEquivalence(
+      letters.map(x => f(g(x))),
+      letters.map(g).map(f)
+    ),
+]);
 
 test('chain (equivalence to decide)', () => {
   const testStr1 = 'num 42';
@@ -645,6 +678,28 @@ test('chain (equivalence to decide)', () => {
   expect(parse (failChain) (testStr3)).toEqual(parse (failDecide) (testStr3));
 });
 
+testMany('chain (laws)', [
+  expectEquivalence(
+    letters.chain(() => digits).chain(() => char('a')),
+    letters.chain(x => (() => digits)(x).chain(() => char('a')))
+  )
+]);
+
+testMany('applicative (laws)', [
+  expectEquivalence(
+    letters.ap(Parser.of(x => x)),
+    letters
+  ),
+  expectEquivalence(
+    Parser.of(42).ap(Parser.of(f)),
+    Parser.of(f(42))
+  ),
+  expectEquivalence(
+    Parser.of(42).ap(Parser.of(f)),
+    Parser.of(f).ap(Parser.of(fn => fn(42)))
+  )
+]);
+
 test('ap (equivalence to ...)', () => {
   const testStr = 'hello';
   const fn = x => ({ value: x })
@@ -665,3 +720,9 @@ test('ap (equivalence to ...)', () => {
   expect(parse (fNonAp) (testStr)).toEqual(parse (fAp) (testStr));
 });
 
+testMany('ap (laws)', [
+  expectEquivalence(
+    letters.ap(Parser.of(g).ap(Parser.of(f).map(f => g => x => f(g(x))))),
+    letters.ap(Parser.of(g)).ap(Parser.of(f))
+  )
+]);
