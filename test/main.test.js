@@ -584,7 +584,7 @@ test('tapParser', () => {
 
   expectedFailTest(parser, 'xyz')();
   expect(wasCalled).toBe(true);
-  expect(value).toEqual(`ParseError (position 0): Expecting character 'a', got 'x'`);
+  expect(value).toEqual([0, `ParseError (position 0): Expecting character 'a', got 'x'`]);
 });
 
 test('toPromise', async () => {
