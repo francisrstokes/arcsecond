@@ -173,7 +173,7 @@ export const regex = re => {
     throw new Error(`regex parsers must contain '^' start assertion.`)
   }
 
-  return () => state => {
+  return FL(() => state => {
     return state.chain(([index, targetString]) => {
       const rest = targetString.slice(index);
       if (rest.length >= 1) {
@@ -186,7 +186,7 @@ export const regex = re => {
       }
       return Left (`ParseError (position ${index}): Expecting string matching '${re}', but got end of input.`);
     });
-  };
+  });
 }
 //           digit :: Parser a String
 export const digit = FL(() => state => {
