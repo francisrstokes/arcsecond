@@ -2,7 +2,7 @@ import {Left, Right} from 'data.either';
 const id = x => x;
 
 // type ParserState e a = Either (Int, e) (Int, String, a)
-// type Parser e f a b = () -> ParserState e a -> ParserState f b
+// type Parser e a b = () -> ParserState e a -> ParserState e b
 
 const FL = p => {
   p['fantasy-land/map'] = fn => FL(() => state => {
@@ -29,6 +29,9 @@ const FL = p => {
   p.ap = p['fantasy-land/ap'];
   p.chain = p['fantasy-land/chain'];
   p.of = p['fantasy-land/of'];
+  p.leftMap = fn => FL(() => state =>
+    p()(state).leftMap(([i, e]) => [i, fn(e, i)])
+  );
 
   return p;
 };
@@ -58,7 +61,7 @@ export const parse = parser => targetString => {
   return parser()(parserState).map(([_, __, result]) => result);
 };
 
-//           decide :: (a -> Parser b c) -> Parser b c
+//           decide :: (a -> Parser e b c) -> Parser e b c
 export const decide = fn => FL(() => state => {
   return state.chain(([_, __, v]) => {
     const parser = fn(v);
@@ -121,6 +124,13 @@ export const many1 = parser => FL(() => state => {
 export const mapTo = fn => FL(() => state => {
   return state.map(([index, targetString, res]) => {
     return [index, targetString, fn(res)];
+  });
+});
+
+//           leftMapTo :: ((e, Int) -> f) -> Parser f a b
+export const leftMapTo = fn => FL(() => state => {
+  return state.leftMap(([index, errorString]) => {
+    return [index, fn(errorString, index)];
   });
 });
 
@@ -205,10 +215,7 @@ export const digit = FL(() => state => {
 });
 
 //           digits :: Parser String a String
-export const digits = pipeParsers([
-  many1 (digit),
-  mapTo (x => x.join(''))
-]);
+export const digits = many1 (digit) .map (x => x.join(''));
 
 //           letter :: Parser String a String
 export const letter = FL(() => state => {
@@ -227,10 +234,7 @@ export const letter = FL(() => state => {
 });
 
 //           letters :: Parser String a String
-export const letters = pipeParsers([
-  many1 (letter),
-  mapTo (x => x.join(''))
-]);
+export const letters = many1 (letter) .map (x => x.join(''));
 
 //           anyOfString :: String -> Parser String a String
 export const anyOfString = s => FL(() => state => {
@@ -247,7 +251,7 @@ export const anyOfString = s => FL(() => state => {
   });
 });
 
-//           namedSequenceOf :: [(String, Parser e a b)] -> Parser f a (StrMap b)
+//           namedSequenceOf :: [(String, Parser e a b)] -> Parser e a (StrMap b)
 export const namedSequenceOf = pairedParsers => FL(() => state => {
   return state.chain(innerState => {
     const results = {};
@@ -279,7 +283,7 @@ export const namedSequenceOf = pairedParsers => FL(() => state => {
   });
 });
 
-//           sequenceOf :: [Parser e a b] -> Parser f a [b]
+//           sequenceOf :: [Parser e a b] -> Parser e a [b]
 export const sequenceOf = parsers => FL(() => state => {
   return state.chain(innerState => {
     const results = [];
@@ -310,7 +314,7 @@ export const sequenceOf = parsers => FL(() => state => {
   });
 });
 
-//           sepBy :: Parser e a c -> Parser a b -> Parser a [b]
+//           sepBy :: Parser e a c -> Parser e a b -> Parser e a [b]
 export const sepBy = sepParser => valParser => FL(() => state => {
   return state.chain(innerState => {
     let nextState = innerState;
@@ -360,7 +364,7 @@ export const sepBy = sepParser => valParser => FL(() => state => {
   });
 });
 
-//           sepBy1 :: Parser a c -> Parser a b  -> Parser a [b]
+//           sepBy1 :: Parser e a c -> Parser f a b  -> Parser String a [b]
 export const sepBy1 = sepParser => valParser => FL(() => state => {
   const res = sepBy (sepParser) (valParser) () (state);
   return res.chain(([index, targetString, value]) => {
@@ -371,8 +375,9 @@ export const sepBy1 = sepParser => valParser => FL(() => state => {
   });
 });
 
-//           choice :: [Parser a *] -> Parser a *
+//           choice :: [Parser e a *] -> Parser e a *
 export const choice = parsers => FL(() => state => {
+  const lefts = [];
   return state.chain(([index]) => {
     let match = null;
     for (const parser of parsers) {
@@ -380,7 +385,10 @@ export const choice = parsers => FL(() => state => {
       const out = parser () (state);
 
       out.cata({
-        Left: id,
+        Left: x => {
+          lefts.push(x);
+          return x;
+        },
         Right: x => {
           exit = true;
           match = Right(x);
@@ -391,24 +399,24 @@ export const choice = parsers => FL(() => state => {
     }
 
     if (!match) {
-      return Left ([index, `ParseError 'choice' (position ${index}): Expecting to match at least parser`]);
+      const furthestLeft = lefts.reduce((acc, l) => l[0] > acc[0] ? l : acc, [-Infinity]);
+      return Left(furthestLeft);
+      // console.log(furthestLeft);
+      // return Left ([index, `ParseError 'choice' (position ${index}): Expecting to match at least parser`]);
     }
 
     return match;
   });
 });
 
-//           between :: Parser a b -> Parser a c -> Parser a d -> Parser a d
-export const between = leftParser => rightParser => parser => pipeParsers ([
-  sequenceOf ([
-    leftParser,
-    parser,
-    rightParser
-  ]),
-  mapTo (([_, x]) => x)
-]);
+//           between :: Parser e a b -> Parser f a c -> Parser g a d -> Parser g a d
+export const between = leftParser => rightParser => parser => sequenceOf ([
+  leftParser,
+  parser,
+  rightParser
+]) .map (([_, x]) => x)
 
-//           everythingUntil :: Parser a b -> Parser a c
+//           everythingUntil :: Parser e a b -> Parser String a c
 export const everythingUntil = parser => FL(() => state => {
   return state.chain (innerState => {
     const results = [];
@@ -449,7 +457,7 @@ export const everythingUntil = parser => FL(() => state => {
   });
 });
 
-//           anythingExcept :: Parser a b -> Parser a c
+//           anythingExcept :: Parser e a b -> Parser String a c
 export const anythingExcept = parser => FL(() => state => {
   return state.chain(([index, targetString]) => {
     const out = parser()(state);
@@ -460,7 +468,7 @@ export const anythingExcept = parser => FL(() => state => {
   })
 })
 
-//           lookAhead :: Parser a b -> Parser a b
+//           lookAhead :: Parser e a b -> Parser e a b
 export const lookAhead = parser => FL(() => state => {
   return state.chain(([i, s]) => {
     const nextState = parser () (state);
@@ -468,7 +476,7 @@ export const lookAhead = parser => FL(() => state => {
   });
 });
 
-//           possibly :: Parser a b -> Parser a (b|null)
+//           possibly :: Parser e a b -> Parser e a (b|null)
 export const possibly = parser => FL(() => state => {
   return state.chain(([i, s]) => {
     const nextState = parser () (state);
@@ -479,7 +487,7 @@ export const possibly = parser => FL(() => state => {
   });
 });
 
-//           skip :: Parser a b -> Parser a a
+//           skip :: Parser e a b -> Parser e a a
 export const skip = parser => FL(() => state => {
   return state.chain(([_, __, value]) => {
     const nextState = parser () (state);
@@ -487,23 +495,17 @@ export const skip = parser => FL(() => state => {
   });
 });
 
-//           whitespace :: Parser a String
-export const whitespace = pipeParsers ([
-  many (anyOfString (' \n\t\r')),
-  mapTo (x => x.join(''))
-]);
+//           whitespace :: Parser e a String
+export const whitespace =  many (anyOfString (' \n\t\r')) .map (x => x.join(''));
 
-//           recursiveParser :: (() => Parser a b) -> Parser a b
+//           recursiveParser :: (() => Parser e a b) -> Parser e a b
 export const recursiveParser = parserThunk => FL(() => parserThunk()());
 
-//           takeRight :: Parser a b -> Parser b c -> Parser a c
+//           takeRight :: Parser e a b -> Parser f b c -> Parser f a c
 export const takeRight = lParser => rParser => pipeParsers ([ lParser, rParser ]);
 
-//           takeLeft :: Parser a b -> Parser b c -> Parser a b
-export const takeLeft = lParser => rParser => pipeParsers ([
-  sequenceOf([lParser, rParser]),
-  mapTo (x => x[0])
-]);
+//           takeLeft :: Parser e a b -> Parser f b c -> Parser e a b
+export const takeLeft = lParser => rParser => sequenceOf([lParser, rParser]) .map (x => x[0]);
 
 //           toPromise :: Either a b -> Promise a b
 export const toPromise = result => {
@@ -516,8 +518,10 @@ export const toPromise = result => {
 //           toValue :: Either a b -> b
 export const toValue = result => {
   return result.cata({
-    Left: x => {
-      throw new Error(x);
+    Left: ([index, x]) => {
+      const e = new Error(x);
+      e.parseIndex = index;
+      throw e;
     },
     Right: x => x
   });

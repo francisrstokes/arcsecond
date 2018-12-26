@@ -34,7 +34,8 @@ const {
   mapTo,
   toPromise,
   toValue,
-  succeedWith
+  succeedWith,
+  leftMapTo
 } = require('../index')
 
 const {Left,Right} = require('data.either');
@@ -326,7 +327,23 @@ testMany(
         char('!')
       ]),
       '-bcd'
-    )
+    ),
+    () => {
+      const parser = choice ([
+        sequenceOf ([
+          letters,
+          char (' '),
+          letters
+        ]),
+        sequenceOf ([
+          digits,
+          char (' '),
+          digits
+        ])
+      ])
+      const failResult = parse (parser) ('12345 hello') .value;
+      expect (failResult).toEqual([6, `ParseError 'many1' (position 6): Expecting to match at least one value`]);
+    }
   ]
 );
 
@@ -409,6 +426,28 @@ testMany(
     ),
   ]
 );
+
+test('leftMapTo', () => {
+  const parser = pipeParsers ([
+    choice ([
+      sequenceOf ([
+        letters,
+        char (' '),
+        letters
+      ]),
+      sequenceOf ([
+        digits,
+        char (' '),
+        digits
+      ])
+    ]),
+    leftMapTo ((_, index) => `Failed to parse structure @ ${index}`)
+  ]);
+
+  const failResult = parse (parser) ('12345 hello') .value;
+
+  expect (failResult).toEqual([6, 'Failed to parse structure @ 6']);
+});
 
 testMany(
   'anythingExcept', [
@@ -605,14 +644,15 @@ test('toPromise', async () => {
 });
 
 test('toValue', () => {
-  const lv = Left('oh no');
-  const rv = Right('oh yes');
+  const lv = parse(str ('oh no'))('nope');
+  const rv = parse(str ('oh yes'))('oh yes');
 
   try {
     toValue(lv);
     throw new Error('Expected to throw error');
   } catch (ex) {
-    expect(ex.message).toBe('oh no');
+    expect(ex.message).toBe(`ParseError (position 0): Expecting string 'oh no', got 'nope...'`);
+    expect(ex.parseIndex).toBe(0);
   }
 
   expect(() => {
@@ -645,6 +685,26 @@ testMany('map (laws)', [
       letters.map(g).map(f)
     ),
 ]);
+
+testMany('leftMap (laws)', [
+  expectEquivalence(
+    fail('nope').leftMap(x => x),
+    fail('nope')
+    ),
+    expectEquivalence(
+      fail('nope').map(x => f(g(x))),
+      fail('nope').map(g).map(f)
+    ),
+]);
+
+test('map (equivalence to mapTo)', () => {
+  const fn = x => ({ value: x })
+
+  const failMap = fail('nope').leftMap(fn);
+  const failMapTo = pipeParsers ([ fail('nope'), leftMapTo (fn) ]);
+
+  expectEquivalence(failMap, failMapTo)();
+});
 
 test('chain (equivalence to decide)', () => {
   const testStr1 = 'num 42';

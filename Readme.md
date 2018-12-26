@@ -338,17 +338,17 @@ The examples are built as es6 modules, which means they need node to be launched
 
 *Non-essential note on the types:* This documentation is using [Hindley-Milner type signatures](https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system) to show the types of function arguments and the return value.
 
-The two main "types" in arcsecond are `Parser a b` and `ParserState a`, which are defined as:
+The two main "types" in arcsecond are `Parser e a b` and `ParserState e a`, which are defined as:
 
-`type ParserState a = Either String (Int, String, a)`
+`type ParserState e a = Either (Int, e) (Int, String, a)`
 
-`type Parser a b = () -> ParserState a -> ParserState b`
+`type Parser e a b = () -> ParserState e a -> ParserState e b`
 
-Which is to say that a `Parser a b` is a type that describes taking a `ParserState a` to a `ParserState b`.
+Which is to say that a `Parser e a b` is a type that describes taking a `ParserState e a` to a `ParserState e b`, where `e` is the the error.
 
 ### parse
 
-`parse :: Parser a b -> String -> Either String b`
+`parse :: Parser e a b -> String -> Either (Int, e) b`
 
 `parse` takes a parser function and a string, and returns the result of parsing the string using the parser.
 
@@ -360,7 +360,7 @@ parse (str ('hello')) ('hello')
 
 ### char
 
-`char :: Char -> Parser a String`
+`char :: Char -> Parser String a String`
 
 `char` takes a character and returns a parser that matches that character **exactly one** time.
 
@@ -372,7 +372,7 @@ parse (char ('h')) ('hello')
 
 ### str
 
-`str :: String -> Parser a String`
+`str :: String -> Parser String a String`
 
 `str` takes a string and returns a parser that matches that string **exactly one** time.
 
@@ -384,7 +384,7 @@ parse (str ('hello')) ('hello world')
 
 ### digit
 
-`digit :: Parser a String`
+`digit :: Parser String a String`
 
 `digit` is a parser that matches **exactly one** numerical digit `/[0-9]/`.
 
@@ -396,7 +396,7 @@ parse (digit) ('99 bottles of beer on the wall')
 
 ### digits
 
-`digits :: Parser a String`
+`digits :: Parser String a String`
 
 `digits` is a parser that matches **one or more** numerical digit `/[0-9]/`.
 
@@ -408,7 +408,7 @@ parse (digits) ('99 bottles of beer on the wall')
 
 ### letter
 
-`letter :: Parser a String`
+`letter :: Parser String a String`
 
 `letter` is a parser that matches **exactly one** alphabetical letter `/[a-zA-Z]/`.
 
@@ -420,7 +420,7 @@ parse (letter) ('hello world')
 
 ### letters
 
-`letters :: Parser a String`
+`letters :: Parser String a String`
 
 `letters` is a parser that matches **one or more** alphabetical letter `/[a-zA-Z]/`.
 
@@ -432,7 +432,7 @@ parse (letters) ('hello world')
 
 ### whitespace
 
-`whitespace :: Parser a String`
+`whitespace :: Parser e a String`
 
 `whitespace` is a parser that matches **zero or more** whitespace characters.
 
@@ -453,7 +453,7 @@ parse (newParser) ('helloworld')
 
 ### anyOfString
 
-`anyOfString :: String -> Parser a String`
+`anyOfString :: String -> Parser String a String`
 
 `anyOfString` takes a string and returns a parser that matches **exactly one** character from that string.
 
@@ -465,7 +465,7 @@ parse (anyOfString ('aeiou')) ('unusual string')
 
 ### regex
 
-`regex :: RegExp -> Parser a String`
+`regex :: RegExp -> Parser String a String`
 
 `regex` takes a RegExp and returns a parser that matches **as many characters** as the RegExp matches.
 
@@ -477,7 +477,7 @@ parse (regex (/[hH][aeiou].{2}o/)) ('hello world')
 
 ### sequenceOf
 
-`sequenceOf :: [Parser * *] -> Parser a [*]`
+`sequenceOf :: [Parser e a b] -> Parser e a [b]`
 
 `sequenceOf` takes an array of parsers, and returns a new parser that matches each of them sequentially, collecting up the results into an array.
 
@@ -496,7 +496,7 @@ parse (newParser) ('hello world')
 
 ### namedSequenceOf
 
-`namedSequenceOf :: [[String, Parser * *]] -> Parser a Object`
+`namedSequenceOf :: [(String, Parser e a b)] -> Parser e a (StrMap b)`
 
 `namedSequenceOf` takes an array of string/parser pairs, and returns a new parser that matches each of them sequentially, collecting up the results into an object where the key is the string in the pair.
 
@@ -522,9 +522,9 @@ parse (newParser) ('hello world')
 
 ### choice
 
-`choice :: [Parser a *] -> Parser a *`
+`choice :: [Parser * a *] -> Parser * a *`
 
-`choice` takes an array of parsers, and returns a new parser that tries to match each one of them sequentially, and returns the first match.
+`choice` takes an array of parsers, and returns a new parser that tries to match each one of them sequentially, and returns the first match. If `choice` fails, then it returns the error message of the parser that matched the most from the string.
 
 **Example**
 ```javascript
@@ -542,7 +542,7 @@ parse (newParser) ('hello world')
 
 ### lookAhead
 
-`lookAhead :: Parser a b -> Parser a b`
+`lookAhead :: Parser e a b -> Parser e a b`
 
 `lookAhead` takes *look ahead* parser, and returns a new parser that matches using the *look ahead* parser, but without consuming input.
 
@@ -560,7 +560,7 @@ parse (newParser) ('hello world')
 
 ### sepBy
 
-`sepBy :: Parser a c -> Parser a b -> Parser a [b]`
+`sepBy :: Parser e a c -> Parser e a b -> Parser e a [b]`
 
 `sepBy` takes two parsers - a *separator* parser and a *value* parser - and returns a new parser that matches **zero or more** values from the *value* parser that are separated by values of the *separator* parser. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
 
@@ -580,7 +580,7 @@ parse (newParser) ('12345')
 
 ### sepBy1
 
-`sepBy1 :: Parser a c -> Parser a b -> Parser a [b]`
+`sepBy1 :: Parser e a c -> Parser e a b -> Parser e a [b]`
 
 `sepBy1` is the same as `sepBy`, except that it matches **one or more** occurence.
 
@@ -597,7 +597,7 @@ parse (newParser) ('1,2,3')
 
 ### many
 
-`many :: Parser a b -> Parser a [b]`
+`many :: Parser e a b -> Parser e a [b]`
 
 `many` takes a parser and returns a new parser which matches that parser **zero or more** times. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
 
@@ -617,7 +617,7 @@ parse (newParser) ('12345')
 
 ### many1
 
-`many1 :: Parser a b -> Parser a [b]`
+`many1 :: Parser e a b -> Parser e a [b]`
 
 `many1` is the same as `many`, except that it matches **one or more** occurence.
 
@@ -639,7 +639,7 @@ parse (newParser) ('12345')
 
 ### between
 
-`between :: between :: Parser a b -> Parser a c -> Parser a d -> Parser a d`
+`between :: Parser e a b -> Parser f a c -> Parser g a d -> Parser g a d`
 
 `between` takes 3 parsers, a *left* parser, a *right* parser, and a *value* parser, returning a new parser that matches a value matched by the *value* parser, between values matched by the *left* parser and the *right* parser.
 
@@ -661,7 +661,7 @@ parse (betweenBrackets (many (letters))) ('(hello world)')
 
 ### everythingUntil
 
-`everythingUntil :: Parser a b -> Parser a c`
+`everythingUntil :: Parser e a b -> Parser String a c`
 
 `everythingUntil` takes a *termination* parser and returns a new parser which matches everything up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
 
@@ -683,7 +683,7 @@ parse (newParser) ('This is a sentence.This is another sentence')
 
 ### anythingExcept
 
-`anythingExcept :: Parser a b -> Parser a c`
+`anythingExcept :: Parser e a b -> Parser String a c`
 
 `anythingExcept` takes a *exception* parser and returns a new parser which matches **exactly one** character, if it is not matched by the *exception* parser.
 
@@ -699,7 +699,7 @@ parse (manyExceptDot) ('This is a sentence.')
 
 ### possibly
 
-`possibly :: Parser a b -> Parser a (b|null)`
+`possibly :: Parser e a b -> Parser e a (b|null)`
 
 `possibly` takes an *attempt* parser and returns a new parser which tries to match using the *attempt* parser. If it is unsuccessful, it returns a null value and does not "consume" any input.
 
@@ -716,7 +716,7 @@ parse (newParser) ('Yep I am here')
 
 ### skip
 
-`skip :: Parser a b -> Parser a a`
+`skip :: Parser e a b -> Parser e a a`
 
 `skip` takes a *skip* parser and returns a new parser which matches using the *skip* parser, but doesn't return its value, but instead the value of whatever came before it.
 
@@ -734,7 +734,7 @@ parse (newParser) ('abc123def')
 
 ### pipeParsers
 
-`pipeParsers :: [Parser * *] -> Parser * *`
+`pipeParsers :: [Parser * * *] -> Parser * * *`
 
 `pipeParsers` takes an array of parsers and composes them left to right, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
@@ -752,7 +752,7 @@ parse (newParser) ('hello world')
 
 ### composeParsers
 
-`composeParsers :: [Parser * *] -> Parser * *`
+`pipeParsers :: [Parser * * *] -> Parser * * *`
 
 `composeParsers` takes an array of parsers and composes them right to left, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
@@ -770,7 +770,7 @@ parse (newParser) ('hello world')
 
 ### takeRight
 
-`takeRight :: Parser a b -> Parser b c -> Parser a c`
+`takeRight :: Parser e a b -> Parser f b c -> Parser f a c`
 
 `takeRight` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *right*.
 
@@ -784,7 +784,7 @@ parse (newParser) ('hello world')
 
 ### takeLeft
 
-`takeLeft :: Parser a b -> Parser b c -> Parser a b`
+`takeLeft :: Parser e a b -> Parser f b c -> Parser e a b`
 
 `takeLeft` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *left*.
 
@@ -798,7 +798,7 @@ parse (newParser) ('hello world')
 
 ### recursiveParser
 
-`recursiveParser :: (() => Parser a b) -> Parser a b`
+`recursiveParser :: (() => Parser e a b) -> Parser e a b`
 
 `recursiveParser` takes a function that returns a parser (a thunk), and returns that same parser. This is needed in order to create *recursive parsers* because javascript is not a "lazy" language.
 
@@ -826,7 +826,7 @@ parse (spaceSeparated (value)) ('abc 123 [42,somethingelse] 45')
 
 ### tapParser
 
-`tapParser :: (a => void) -> Parser a a`
+`tapParser :: (a => void) -> Parser e a a`
 
 `tapParser` takes a function and returns a parser that does nothing and consumes no input, but runs the provided function on the last parsed value. This is intended as a debugging tool to see the state of parsing at any point in a sequential operation like `sequenceOf` or `pipeParsers`.
 
@@ -846,7 +846,7 @@ parse (newParser) ('hello world')
 
 ### decide
 
-`decide :: (a -> Parser b c) -> Parser b c`
+`decide :: (a -> Parser e b c) -> Parser e b c`
 
 `decide` takes a function that recieves the last matched value and returns a new parser. It's important that the function **always** returns a parser. If a valid one cannot be selected, you can always use [fail](#fail).
 
@@ -877,7 +877,7 @@ parse (newParser) ('asPineapple wayoh')
 
 ### mapTo
 
-`mapTo :: (a -> b) -> Parser a b`
+`mapTo :: (a -> b) -> Parser e a b`
 
 `mapTo` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
 
@@ -900,9 +900,29 @@ parse (newParser) ('hello world')
 //    })
 ```
 
+### leftMapTo
+
+`leftMapTo :: ((e, Int) -> f) -> Parser f a b`
+
+`leftMapTo` is like [mapTo](#mapto) but it transforms the error value. The function passed to `leftMapTo` gets the *current error message* as its first argument and the *index* that parsing stopped at as the second.
+
+**Example**
+```javascript
+const newParser = pipeParsers([
+  letters,
+  leftMapTo((message, index) => `Old message was: [${message}] @ index ${index}`)
+]);
+
+parse (newParser) ('1234')
+// -> Either.Left([
+//      0,
+//      'Old message was: [ParseError \'many1\' (position 0): Expecting to match at least on value] @ index 0'
+//    ])
+```
+
 ### fail
 
-`fail :: String -> Parser a b`
+`fail :: String -> Parser String a b`
 
 `fail` takes an *error message* string and returns a parser that always fails with the provided *error message*.
 
@@ -914,7 +934,7 @@ parse (fail ('Nope')) ('hello world')
 
 ### succeedWith
 
-`succeedWith :: b -> Parser a b`
+`succeedWith :: b -> Parser e a b`
 
 `succeedWith` takes an value and returns a parser that always matches that value and does not consume any input.
 
