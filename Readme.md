@@ -44,10 +44,11 @@ Arcsecond is a Fantasy Land compliant javascript [Parser Combinator](https://en.
   - [5.29 tapParser](#tapparser)
   - [5.30 decide](#decide)
   - [5.31 mapTo](#mapto)
-  - [5.32 fail](#fail)
-  - [5.33 succeedWith](#succeedwith)
-  - [5.34 toPromise](#topromise)
-  - [5.35 toValue](#tovalue)
+  - [5.32 leftMapTo](#leftmapto)
+  - [5.33 fail](#fail)
+  - [5.34 succeedWith](#succeedwith)
+  - [5.35 toPromise](#topromise)
+  - [5.36 toValue](#tovalue)
 - [6. A note on recursive grammars](#a-note-on-recursive-grammars)
 - [7. Fantasy Land](#fantasy-land)
   - [7.1 Equivalent Operations](#equivalent-operations)
@@ -592,7 +593,7 @@ parse (newParser) ('some,comma,separated,words')
 // -> Either.Right([ 'some', 'comma', 'separated', 'words' ])
 
 parse (newParser) ('1,2,3')
-// -> Either.Left('ParseError \'sepBy1\' (position 0): Expecting to match at least one separated value')
+// -> Either.Left([0, 'ParseError \'sepBy1\' (position 0): Expecting to match at least one separated value'])
 ```
 
 ### many
@@ -632,7 +633,7 @@ parse (newParser) ('')
 // -> Either.Left('ParseError \'many1\' (position 0): Expecting to match at least one value')
 
 parse (newParser) ('12345')
-// -> Either.Left('ParseError \'many1\' (position 0): Expecting to match at least one value')
+// -> Either.Left([0, 'ParseError \'many1\' (position 0): Expecting to match at least one value'])
 ```
 
 
@@ -678,7 +679,7 @@ const newParser = sequenceOf ([
 
 
 parse (newParser) ('This is a sentence.This is another sentence')
-// -> Either.Left('ParseError (position 18): Expecting string \'This is another sentence\', got \'.This is another sentenc...\'')
+// -> Either.Left([18, 'ParseError (position 18): Expecting string \'This is another sentence\', got \'.This is another sentenc...\''])
 ```
 
 ### anythingExcept
@@ -872,7 +873,7 @@ parse (newParser) ('asLetters hello')
 // -> Either.Right([ 'asLetters', 'hello' ])
 
 parse (newParser) ('asPineapple wayoh')
-// -> Either.Left('Unrecognised signifier \'asPineapple\'')
+// -> Either.Left([12, 'Unrecognised signifier \'asPineapple\''])
 ```
 
 ### mapTo
@@ -929,7 +930,7 @@ parse (newParser) ('1234')
 **Example**
 ```javascript
 parse (fail ('Nope')) ('hello world')
-// -> Either.Left('Nope')
+// -> Either.Left([0, 'Nope'])
 ```
 
 ### succeedWith
