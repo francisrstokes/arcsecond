@@ -99,7 +99,7 @@ export const many = parser => FL(() => state => {
         }
       });
 
-      if (exit) {
+      if (exit || nextState[0] >= nextState[1].length) {
         break;
       }
     }
