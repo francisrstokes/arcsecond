@@ -1,179 +1,223 @@
 import {Left, Right} from 'data.either';
-const id = x => x;
 
-// type ParserState e a = Either (Int, e) (Int, String, a)
-// type Parser e a b = () -> ParserState e a -> ParserState e b
-
-const FL = p => {
-  p['fantasy-land/map'] = fn => FL(() => state => {
-    return p()(state).map(([i, s, v]) => [i, s, fn(v)]);
-  });
-
-  p['fantasy-land/chain'] = fn => FL(() => state => {
-    return p()(state).chain(([i, s, v]) => {
-      return fn(v)()(Right([i, s, v]))
-    });
-  });
-
-  p['fantasy-land/ap'] = parserOfFunction => FL(() => state => {
-    return parserOfFunction()(state).chain(([_, __, fn]) => {
-      return p()(state).map(([i, s, v]) => [i, s, fn(v)]);
-    });
-  });
-
-  p['fantasy-land/of'] = x => FL(() => state => {
-    return state.map(([i, s]) => [i, s, x]);
-  });
-
-  p.map = p['fantasy-land/map'];
-  p.ap = p['fantasy-land/ap'];
-  p.chain = p['fantasy-land/chain'];
-  p.of = p['fantasy-land/of'];
-  p.leftMap = fn => FL(() => state =>
-    p()(state).leftMap(([i, e]) => [i, fn(e, i)])
-  );
-
-  return p;
+export function Parser(p) {
+  this.p = p;
 };
 
-//           Parser :: Parser e a a
-export const Parser = FL(() => id);
+Parser.prototype.run = function Parser$run(targetString) {
+  return this.p(Right([0, targetString, null])).map((result) => {
+    return result[2];
+  });
+};
+
+Parser.prototype['fantasy-land/map'] = function Parser$map(fn) {
+  const that = this;
+  return new Parser(function Parser$map$state (state) {
+    return that.p(state).map(function Parser$map$state$map([i, s, v]) {
+      return [i, s, fn(v)];
+    });
+  });
+};
+
+Parser.prototype['fantasy-land/chain'] = function Parser$chain(fn) {
+  const that = this;
+  return new Parser(function Parser$chain$state(state) {
+    return that.p(state).chain(function Parser$chain$chain([i, s, v]) {
+      return fn(v).p(Right([i, s, v]));
+    });
+  });
+};
+
+Parser.prototype['fantasy-land/ap'] = function Parser$ap(parserOfFunction) {
+  const that = this;
+  return new Parser(function Parser$ap$state(state) {
+    return parserOfFunction.p(state).chain(function Parser$ap$chain([_, __, fn]) {
+      return that.p(state).map(function Parser$ap$chain$map([i, s, v]) {
+        return [i, s, fn(v)];
+      });
+    });
+  });
+};
+
+Parser.prototype.leftMap = function Parser$leftMap(fn) {
+  const that = this;
+  return new Parser(function Parser$leftMap$state(state) {
+    return that.p(state).leftMap(function Parser$leftMap$state$leftMap([i, e]) {
+      return [i, fn(e, i)];
+    });
+  });
+};
+
+Parser.prototype.map = Parser.prototype['fantasy-land/map'];
+Parser.prototype.ap = Parser.prototype['fantasy-land/ap'];
+Parser.prototype.chain = Parser.prototype['fantasy-land/chain'];
+Parser['fantasy-land/of'] = function (x) {
+  return new Parser(state => {
+    return state.map(([i, s]) => [i, s, x]);
+  });
+};
+Parser.of = Parser['fantasy-land/of'];
 
 //           pipeParsers :: [Parser * * *] -> Parser * * *
-export const pipeParsers = fns => FL(() => state => {
-  return fns.slice(1).reduce((nextState, fn) => fn()(nextState), fns[0]()(state))
-});
+export const pipeParsers = function pipeParsers (parsers) {
+  return new Parser(function pipeParsers$state (state) {
+    let nextState = state;
+    for (const parser of parsers) {
+      nextState = parser.p(nextState);
+    }
+    return nextState;
+  });
+};
 
 //           composeParsers :: [Parser * * *] -> Parser * * *
-export const composeParsers = fns => () => x => {
-  return pipeParsers ([...fns].reverse()) () (x);
+export const composeParsers = function composeParsers(parsers) {
+  return new Parser(function composeParsers$state(state) {
+    return pipeParsers ([...parsers].reverse()).p(state);
+  });
 };
 
 //           tapParser :: (a => void) -> Parser e a a
-export const tapParser = fn => FL(() => state => {
-  fn(state.value);
-  return state;
-});
+export const tapParser = function tapParser(fn) {
+  return new Parser(function tapParser$state(state) {
+    fn(state.value);
+    return state;
+  });
+};
 
 //           parse :: Parser e a b -> String -> Either e b
-export const parse = parser => targetString => {
-  const parserState = Right([0, targetString, null]);
-  return parser()(parserState).map(([_, __, result]) => result);
+export const parse = function parse(parser) {
+  return function parse$targetString(targetString) {
+    return parser.run(targetString);
+  };
 };
 
 //           decide :: (a -> Parser e b c) -> Parser e b c
-export const decide = fn => FL(() => state => {
-  return state.chain(([_, __, v]) => {
-    const parser = fn(v);
-    return parser()(state);
+export const decide = function decide(fn) {
+  return new Parser(function decide$state(state) {
+    return state.chain(function decide$state$chain([_, __, v]) {
+      const parser = fn(v);
+      return parser.p(state);
+    });
   });
-});
+};
 
 //           fail :: String -> Parser String a b
-export const fail = errorMessage => FL(() => state => {
-  return state.chain(([i]) => Left ([i, errorMessage]));
-});
+export const fail = function fail(errorMessage) {
+  return new Parser(function fail$state(state) {
+    return state.chain(function fail$state$chain([i]) {
+      return Left ([i, errorMessage]);
+    });
+  });
+};
 
 //           succeedWith :: b -> Parser e a b
-export const succeedWith = x => FL(() => state => {
-  return state.map(([i, s]) => [i, s, x]);
-});
+export const succeedWith = function succeedWith(x) {
+  return new Parser(function succeedWith$state(state) {
+    return state.map(function succeedWith$state$map([i, s]) {
+      return [i, s, x]
+    });
+  });
+};
 
 //           many :: Parser e a b -> Parser e a [b]
-export const many = parser => FL(() => state => {
-  return state.chain(innerState => {
-    const results = [];
-    let nextState = innerState;
+export const many = function many(parser) {
+  return new Parser(function many$state(state) {
+    return state.chain(function many$state$chain(innerState) {
+      const results = [];
+      let nextState = innerState;
 
-    while (true) {
-      let exit = false;
-
-      const out = parser () (Right(nextState));
-      out.cata({
-        Right: x => {
-          nextState = x;
+      while (true) {
+        const out = parser.p(Right(nextState));
+        if (out.isLeft) {
+          break;
+        } else {
+          nextState = out.value;
           results.push(nextState[2]);
-        },
-        Left: () => {
-          exit = true;
+
+          if (nextState[0] >= nextState[1].length) {
+            break;
+          }
         }
-      });
-
-      if (exit || nextState[0] >= nextState[1].length) {
-        break;
       }
-    }
 
-    const [index, targetString] = nextState;
-    return Right ([index, targetString, results]);
+      const [index, targetString] = nextState;
+      return Right ([index, targetString, results]);
+    });
   });
-});
+};
 
 //           many1 :: Parser e a b -> Parser String a [b]
-export const many1 = parser => FL(() => state => {
-  const res = many (parser) () (state);
-  return res.chain(([index, targetString, value]) => {
-    if (value.length === 0) {
-      return Left ([index, `ParseError 'many1' (position ${index}): Expecting to match at least one value`]);
-    }
-    return Right ([index, targetString, value]);
+export const many1 = function many1(parser) {
+  return new Parser(function many1$state(state) {
+    const res = many (parser).p(state);
+    return res.chain(function many1$state$chain([index, targetString, value]) {
+      if (value.length === 0) {
+        return Left ([index, `ParseError 'many1' (position ${index}): Expecting to match at least one value`]);
+      }
+      return Right ([index, targetString, value]);
+    });
   });
-});
+};
 
 //           mapTo :: (a -> b) -> Parser e a b
-export const mapTo = fn => FL(() => state => {
-  return state.map(([index, targetString, res]) => {
-    return [index, targetString, fn(res)];
+export const mapTo = function mapTo(fn) {
+  return new Parser(function mapTo$state(state) {
+    return state.map(function mapTo$state$map([index, targetString, res]) {
+      return [index, targetString, fn(res)];
+    });
   });
-});
+};
 
 //           leftMapTo :: ((e, Int) -> f) -> Parser f a b
-export const leftMapTo = fn => FL(() => state => {
+export const leftMapTo = fn => new Parser(state => {
   return state.leftMap(([index, errorString]) => {
     return [index, fn(errorString, index)];
   });
 });
 
 //           char :: Char -> Parser String a String
-export const char = c => FL(() => state => {
+export const char = function char(c) {
   if (!c || c.length !== 1) {
     throw new TypeError (`char must be called with a single character, but got ${c}`);
   }
 
-  return state.chain(([index, targetString]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      if (rest[0] === c) {
-        return Right ([index + 1, targetString, c]);
-      } else {
-        return Left ([index, `ParseError (position ${index}): Expecting character '${c}', got '${rest[0]}'`]);
+  return new Parser(function char$state (state) {
+    return state.chain(function char$state$chain([index, targetString]) {
+      if (index < targetString.length) {
+        if (targetString[index] === c) {
+          return Right ([index + 1, targetString, c]);
+        } else {
+          return Left ([index, `ParseError (position ${index}): Expecting character '${c}', got '${targetString[index]}'`]);
+        }
       }
-    }
-    return Left ([index, `ParseError (position ${index}): Expecting character '${c}', but got end of input.`]);
+      return Left ([index, `ParseError (position ${index}): Expecting character '${c}', but got end of input.`]);
+    });
   });
-});
+};
 
 //           str :: String -> Parser String a String
-export const str = s => FL(() => state => {
+export const str = function str(s) {
   if (!s || s.length < 1) {
     throw new TypeError (`str must be called with a string with length > 1, but got ${s}`);
   }
 
-  return state.chain(([index, targetString]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      if (rest.startsWith(s)) {
-        return Right ([index + s.length, targetString, s]);
-      } else {
-        return Left ([index, `ParseError (position ${index}): Expecting string '${s}', got '${rest.slice(0, s.length)}...'`]);
+  return new Parser(function str$state (state) {
+    return state.chain(function str$state$chain([index, targetString]) {
+      const rest = targetString.slice(index);
+      if (rest.length >= 1) {
+        if (rest.startsWith(s)) {
+          return Right ([index + s.length, targetString, s]);
+        } else {
+          return Left ([index, `ParseError (position ${index}): Expecting string '${s}', got '${rest.slice(0, s.length)}...'`]);
+        }
       }
-    }
-    return Left ([index, `ParseError (position ${index}): Expecting string '${s}', but got end of input.`]);
+      return Left ([index, `ParseError (position ${index}): Expecting string '${s}', but got end of input.`]);
+    });
   });
-});
+};
 
 //           regex :: RegExp -> Parser String a String
-export const regex = re => {
+export const regex = function regex(re) {
   const typeofre = Object.prototype.toString.call(re);
   if (typeofre !== '[object RegExp]') {
     throw new TypeError (`regex must be called with a Regular Expression, but got ${typeofre}`);
@@ -183,8 +227,8 @@ export const regex = re => {
     throw new Error(`regex parsers must contain '^' start assertion.`)
   }
 
-  return FL(() => state => {
-    return state.chain(([index, targetString]) => {
+  return new Parser(function regex$state(state) {
+    return state.chain(function regex$state$chain([index, targetString]) {
       const rest = targetString.slice(index);
       if (rest.length >= 1) {
         const match = rest.match(re);
@@ -197,10 +241,11 @@ export const regex = re => {
       return Left ([index, `ParseError (position ${index}): Expecting string matching '${re}', but got end of input.`]);
     });
   });
-}
+};
+
 //           digit :: Parser String a String
-export const digit = FL(() => state => {
-  return state.chain(([index, targetString]) => {
+export const digit = new Parser(function digit$state(state) {
+  return state.chain(function digit$state$chain([index, targetString]) {
     const rest = targetString.slice(index);
 
     if (rest.length >= 1) {
@@ -218,8 +263,8 @@ export const digit = FL(() => state => {
 export const digits = many1 (digit) .map (x => x.join(''));
 
 //           letter :: Parser String a String
-export const letter = FL(() => state => {
-  return state.chain(([index, targetString]) => {
+export const letter = new Parser(function letter$state(state) {
+  return state.chain(function letter$state$chain([index, targetString]) {
     const rest = targetString.slice(index);
 
     if (rest.length >= 1) {
@@ -237,269 +282,246 @@ export const letter = FL(() => state => {
 export const letters = many1 (letter) .map (x => x.join(''));
 
 //           anyOfString :: String -> Parser String a String
-export const anyOfString = s => FL(() => state => {
-  return state.chain(([index, targetString]) => {
-    const rest = targetString.slice(index);
-    if (rest.length >= 1) {
-      if (s.includes(rest[0])) {
-        return Right ([index + 1, targetString, rest[0]]);
-      } else {
-        return Left ([index, `ParseError (position ${index}): Expecting any of the string "${s}", got ${rest[0]}`]);
+export const anyOfString = function anyOfString(s) {
+  return new Parser(function anyOfString$state(state) {
+    return state.chain(([index, targetString]) => {
+      const rest = targetString.slice(index);
+      if (rest.length >= 1) {
+        if (s.includes(rest[0])) {
+          return Right ([index + 1, targetString, rest[0]]);
+        } else {
+          return Left ([index, `ParseError (position ${index}): Expecting any of the string "${s}", got ${rest[0]}`]);
+        }
       }
-    }
-    return Left ([index, `ParseError (position ${index}): Expecting any of the string "${s}", but got end of input.`]);
+      return Left ([index, `ParseError (position ${index}): Expecting any of the string "${s}", but got end of input.`]);
+    });
   });
-});
+};
 
 //           namedSequenceOf :: [(String, Parser e a b)] -> Parser e a (StrMap b)
-export const namedSequenceOf = pairedParsers => FL(() => state => {
-  return state.chain(innerState => {
-    const results = {};
-    let left = null;
-    let nextState = innerState;
+export const namedSequenceOf = function namedSequenceOf(pairedParsers) {
+  return new Parser(function namedSequenceOf$state(state) {
+    return state.chain(() => {
+      const results = {};
+      let nextState = state;
 
-    for (const [key, parser] of pairedParsers) {
-      const out = parser () (Right(nextState));
-
-      out.cata ({
-        Right: x => {
-          nextState = x;
-          results[key] = x[2];
-        },
-        Left: x => {
-          left = x;
+      for (const [key, parser] of pairedParsers) {
+        const out = parser.p(nextState);
+        if (out.isLeft) {
+          return out;
+        } else {
+          nextState = out;
+          results[key] = out.value[2];
         }
-      });
-
-      if (left) {
-        break;
       }
-    }
 
-    if (left) return Left (left);
-
-    const [i, s] = nextState;
-    return Right ([i, s, results]);
+      const [i, s] = nextState.value;
+      return Right ([i, s, results]);
+    });
   });
-});
+};
 
 //           sequenceOf :: [Parser e a b] -> Parser e a [b]
-export const sequenceOf = parsers => FL(() => state => {
-  return state.chain(innerState => {
-    const results = [];
-    let left = null;
-    let nextState = innerState;
+export const sequenceOf = function sequenceOf(parsers) {
+  return new Parser(function sequenceOf$state(state) {
+    return state.chain(() => {
+      const results = new Array(parsers.length);
+      let nextState = state;
 
-    for (const parser of parsers) {
-      const out = parser () (Right(nextState));
-      out.cata ({
-        Right: x => {
-          nextState = x;
-          results.push(x[2]);
-        },
-        Left: x => {
-          left = x;
+      for (let i = 0; i < parsers.length; i++) {
+        const out = parsers[i].p(nextState);
+        if (out.isLeft) {
+          return out;
+        } else {
+          nextState = out;
+          results[i] = out.value[2];
         }
-      });
-
-      if (left) {
-        break;
       }
-    }
 
-    if (left) return Left (left);
-
-    const [i, s] = nextState;
-    return Right ([i, s, results]);
+      const [i, s] = nextState.value;
+      return Right ([i, s, results]);
+    });
   });
-});
+};
 
 //           sepBy :: Parser e a c -> Parser e a b -> Parser e a [b]
-export const sepBy = sepParser => valParser => FL(() => state => {
-  return state.chain(innerState => {
-    let nextState = innerState;
-    let left = null;
-    const results = [];
+export const sepBy = function sepBy(sepParser) {
+  return function sepBy$valParser(valParser) {
+    return new Parser(function sepBy$valParser$state(state) {
+      return state.chain(function sepBy$valParser$state$chain() {
+        let nextState = state;
+        let left = null;
+        const results = [];
 
-    while (true) {
-      let exit = false;
+        while (true) {
+          const valState = valParser.p(nextState);
+          const sepState = sepParser.p(valState);
 
-      const valState = valParser () (Right (nextState));
-      const sepState = sepParser () (valState);
+          if (valState.isLeft) {
+            left = valState;
+            break;
+          } else {
+            results.push(valState.value[2]);
+          }
 
-      const unwrappedValState = valState.cata ({
-        Right: x => {
-          results.push(x[2]);
-          return x;
-        },
-        Left: x => {
-          left = x;
-          exit = true;
+          if (sepState.isLeft) {
+            nextState = valState;
+            break;
+          }
+
+          nextState = sepState;
         }
-      });
 
-      const unwrappedSepState = sepState.cata ({
-        Right: id,
-        Left: () => {
-          nextState = unwrappedValState;
-          exit = true;
+        if (left) {
+          if (results.length === 0) {
+            const [i, s] = state.value;
+            return Right ([i, s, results]);
+          }
+          return left;
         }
+
+        const [i, s] = nextState.value;
+        return Right ([i, s, results]);
       });
-
-      if (exit) break;
-
-      nextState = unwrappedSepState;
-    }
-
-    if (left) {
-      if (results.length === 0) {
-        const [i, s] = innerState;
-        return Right ([i, s, []]);
-      }
-      return Left (left);
-    }
-
-    const [i, s] = nextState;
-    return Right ([i, s, results]);
-  });
-});
+    });
+  }
+};
 
 //           sepBy1 :: Parser e a c -> Parser f a b  -> Parser String a [b]
-export const sepBy1 = sepParser => valParser => FL(() => state => {
-  const res = sepBy (sepParser) (valParser) () (state);
-  return res.chain(([index, targetString, value]) => {
-    if (value.length === 0) {
-      return Left ([index, `ParseError 'sepBy1' (position ${index}): Expecting to match at least one separated value`]);
-    }
-    return Right ([index, targetString, value]);
-  });
-});
+export const sepBy1 = function sepBy1(sepParser) {
+  return function sepBy1$valParser(valParser) {
+    return new Parser(function sepBy1$valParser$state(state) {
+      return sepBy(sepParser)(valParser).p(state).chain(function sepBy1$valParser$state$chain([index, targetString, value]) {
+        if (value.length === 0) {
+          return Left ([index, `ParseError 'sepBy1' (position ${index}): Expecting to match at least one separated value`]);
+        }
+        return Right ([index, targetString, value]);
+      });
+    });
+  }
+};
 
 //           choice :: [Parser e a *] -> Parser e a *
-export const choice = parsers => FL(() => state => {
-  const lefts = [];
-  return state.chain(([index]) => {
-    let match = null;
-    for (const parser of parsers) {
-      let exit = false;
-      const out = parser () (state);
+export const choice = function choice(parsers) {
+  return new Parser(function choice$state(state) {
+  let left = null;
+    return state.chain(function choice$state$chain() {
+      for (const parser of parsers) {
+        const out = parser.p(state);
 
-      out.cata({
-        Left: x => {
-          lefts.push(x);
-          return x;
-        },
-        Right: x => {
-          exit = true;
-          match = Right(x);
+        if (out.isLeft) {
+          if (!left || out.value[0] > left.value[0]) {
+            left = out;
+          }
+        } else {
+          return out;
         }
-      });
+      }
 
-      if (exit) break;
-    }
-
-    if (!match) {
-      const furthestLeft = lefts.reduce((acc, l) => l[0] > acc[0] ? l : acc, [-Infinity]);
-      return Left(furthestLeft);
-      // console.log(furthestLeft);
-      // return Left ([index, `ParseError 'choice' (position ${index}): Expecting to match at least parser`]);
-    }
-
-    return match;
+      return left;
+    });
   });
-});
+};
 
 //           between :: Parser e a b -> Parser f a c -> Parser g a d -> Parser g a d
-export const between = leftParser => rightParser => parser => sequenceOf ([
-  leftParser,
-  parser,
-  rightParser
-]) .map (([_, x]) => x)
+export const between = function between(leftParser) {
+  return function between$rightParser(rightParser) {
+    return function between$rightParser(parser) {
+      return sequenceOf ([
+        leftParser,
+        parser,
+        rightParser
+      ]) .map (([_, x]) => x);
+    }
+  }
+};
 
 //           everythingUntil :: Parser e a b -> Parser String a c
-export const everythingUntil = parser => FL(() => state => {
-  return state.chain (innerState => {
-    const results = [];
-    let nextState = innerState;
-    let eof = false;
+export const everythingUntil = function everythingUntil(parser) {
+  return new Parser(state => {
+    return state.chain (function everythingUntil$state(innerState) {
+      const results = [];
+      let nextState = state;
 
-    while (true) {
-      let exit = false;
-      const out = parser () (Right (nextState));
+      while (true) {
+        const out = parser.p(nextState);
 
-      out.cata ({
-        Left: () => {
-          const [index, targetString] = nextState;
+        if (out.isLeft) {
+          const [index, targetString] = nextState.value;
           const val = targetString[index];
-
           if (val) {
             results.push(val);
-            nextState = [index + 1, targetString, val]
+            nextState = Right([index + 1, targetString, val]);
           } else {
-            eof = true;
-            exit = true;
+            return Left ([nextState[0], `ParseError 'everythingUntil' (position ${nextState.value[0]}): Unexpected end of input.`]);
           }
-        },
-        Right: () => {
-          exit = true;
+        } else {
+          break;
         }
-      });
-
-      if (exit) break;
-    }
-
-    if (eof) {
-      return Left ([nextState[0], `ParseError 'everythingUntil' (position ${nextState[0]}): Unexpected end of input.`]);
-    }
-
-    const [i, s] = nextState;
-    return Right ([i, s, results.join('')]);
+      }
+      const [i, s] = nextState.value;
+      return Right ([i, s, results.join('')]);
+    });
   });
-});
+};
 
 //           anythingExcept :: Parser e a b -> Parser String a c
-export const anythingExcept = parser => FL(() => state => {
-  return state.chain(([index, targetString]) => {
-    const out = parser()(state);
-    return out.cata({
-      Left: () => Right ([index + 1, targetString, targetString[index]]),
-      Right: ([_, __, s]) => Left ([index, `ParseError 'anythingExcept' (position ${index}): Matched '${s}' from the exception parser`])
+export const anythingExcept = function anythingExcept(parser) {
+  return new Parser(function anythingExcept$state(state) {
+    return state.chain(([index, targetString]) => {
+      const out = parser.p(state);
+      if (out.isLeft) {
+        return Right ([index + 1, targetString, targetString[index]]);
+      }
+      return Left ([index, `ParseError 'anythingExcept' (position ${index}): Matched '${out.value[2]}' from the exception parser`]);
     });
-  })
-})
+  });
+};
 
 //           lookAhead :: Parser e a b -> Parser e a b
-export const lookAhead = parser => FL(() => state => {
-  return state.chain(([i, s]) => {
-    const nextState = parser () (state);
-    return nextState.map(([_, __, v]) => [i, s, v]);
-  });
-});
-
-//           possibly :: Parser e a b -> Parser e a (b|null)
-export const possibly = parser => FL(() => state => {
-  return state.chain(([i, s]) => {
-    const nextState = parser () (state);
-    return nextState.cata({
-      Left: () => Right ([i, s, null]),
-      Right: x => Right (x)
+export const lookAhead = function lookAhead(parser) {
+  return new Parser(function lookAhead$state(state) {
+    return state.chain(function lookAhead$state$chain([i, s]) {
+      const nextState = parser.p(state);
+      return nextState.map(function lookAhead$state$chain$map([_, __, v]) {
+        return [i, s, v]
+      });
     });
   });
-});
+};
+
+//           possibly :: Parser e a b -> Parser e a (b|null)
+export const possibly = function possibly(parser) {
+  return new Parser(function possibly$state(state) {
+    return state.chain(function possibly$state$chain([index, targetString]) {
+      const nextState = parser.p(state);
+      if (nextState.isLeft) {
+        return Right([index, targetString, null]);
+      }
+      return nextState;
+    });
+  });
+};
 
 //           skip :: Parser e a b -> Parser e a a
-export const skip = parser => FL(() => state => {
-  return state.chain(([_, __, value]) => {
-    const nextState = parser () (state);
-    return nextState.map (([i, s]) => [i, s, value]);
+export const skip = function skip(parser) {
+  return new Parser(function skip$state(state) {
+    return state.chain(function skip$state$chain([_, __, value]) {
+      const nextState = parser.p(state);
+      return nextState.map (([i, s]) => [i, s, value]);
+    });
   });
-});
+};
 
 //           whitespace :: Parser e a String
 export const whitespace =  many (anyOfString (' \n\t\r')) .map (x => x.join(''));
 
 //           recursiveParser :: (() => Parser e a b) -> Parser e a b
-export const recursiveParser = parserThunk => FL(() => parserThunk()());
+export const recursiveParser = function recursiveParser(parserThunk) {
+  return new Parser(function recursiveParser$state(state) {
+    return parserThunk().p(state);
+  });
+};
 
 //           takeRight :: Parser e a b -> Parser f b c -> Parser f a c
 export const takeRight = lParser => rParser => pipeParsers ([ lParser, rParser ]);
@@ -526,4 +548,3 @@ export const toValue = result => {
     Right: x => x
   });
 };
-
