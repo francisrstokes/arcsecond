@@ -715,6 +715,26 @@ parse (newParser) ('Yep I am here')
 // -> Either.Right([ null, 'Yep I am here' ])
 ```
 
+### endOfInput
+
+`endOfInput :: Parser e a b`
+
+`endOfInput` is a parser that only succeeds when there is no more input to be parsed.
+
+**Example**
+```javascript
+const newParser = sequenceOf ([
+  str ('abc'),
+  endOfInput
+]);
+
+parse (newParser) ('abc')
+// -> Either.Right([ 'abc', null ])
+
+parse (newParser) ('abcd')
+// -> Either.Left([ 3, 'ParseError \'endOfInput\' (position 3): Expected end of input but got \'d\'' ])
+```
+
 ### skip
 
 `skip :: Parser e a b -> Parser e a a`

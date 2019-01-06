@@ -513,6 +513,16 @@ export const skip = function skip(parser) {
   });
 };
 
+//           endOfInput :: Parser e a b
+export const endOfInput = new Parser(function endOfInput$state(state) {
+  return state.chain(function endOfInput$state$chain([index, targetString]) {
+    if (index !== targetString.length) {
+      return Left([index, `ParseError 'endOfInput' (position ${index}): Expected end of input but got '${targetString.slice(index, index+1)}'`])
+    }
+    return Right([index, targetString, null]);
+  });
+});
+
 //           whitespace :: Parser e a String
 export const whitespace =  many (anyOfString (' \n\t\r')) .map (x => x.join(''));
 
