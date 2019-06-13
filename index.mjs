@@ -1,4 +1,5 @@
-import {Left, Right} from 'data.either';
+import Either from 'data.either';
+const {Left, Right} = Either;
 
 export function Parser(p) {
   this.p = p;
