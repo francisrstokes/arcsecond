@@ -120,6 +120,22 @@ export const succeedWith = function succeedWith(x) {
   });
 };
 
+//           either :: Parser e a b -> Parser e (Either f b) c
+export const either = function either(parser) {
+  return new Parser(function either$state(state) {
+    return state.chain(function either$state$chain(innerState) {
+      const res = parser.p(Right(innerState));
+      return Right([
+        res.value[0],
+        innerState[1],
+        res.isLeft ?
+          res :
+          res.map(([_, __, v]) => v)
+      ]);
+    });
+  });
+}
+
 //           many :: Parser e a b -> Parser e a [b]
 export const many = function many(parser) {
   return new Parser(function many$state(state) {

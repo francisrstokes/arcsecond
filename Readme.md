@@ -51,6 +51,7 @@ Arcsecond is a Fantasy Land compliant javascript [Parser Combinator](https://en.
     - [leftMapTo](#leftmapto)
     - [fail](#fail)
     - [succeedWith](#succeedwith)
+    - [either](#either)
     - [toPromise](#topromise)
     - [toValue](#tovalue)
   - [A note on recursive grammars](#a-note-on-recursive-grammars)
@@ -967,6 +968,18 @@ parse (fail ('Nope')) ('hello world')
 ```javascript
 parse (succeedWith ('anything')) ('hello world')
 // -> Either.Right('anything')
+```
+
+### either
+
+`either :: Parser e a b -> Parser e (Either f b) c`
+
+`either` takes a parser and returns a parser that will always succeed, but the captured value will be an Either, indicating success or failure.
+
+**Example**
+```javascript
+parse (either (fail('nope!')) ('hello world')
+// -> Either.Right(Either.Left([0, 'nope!']))
 ```
 
 ### toPromise

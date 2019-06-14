@@ -35,7 +35,8 @@ const {
   toPromise,
   toValue,
   succeedWith,
-  leftMapTo
+  leftMapTo,
+  either
 } = require('../index')
 
 const {Left,Right} = require('data.either');
@@ -109,6 +110,28 @@ testMany(
     expectedFailTest (char ('a'), '123'),
     expectedFailTest (char ('a'), ''),
     // expectedThrowTest (char ('aaaa'), 'aaaabcdef', 'char must be called with a single character, but got aaaa'),
+  ]
+);
+
+testMany(
+  'either',
+  [
+    () => {
+      const p = either (char ('a'));
+      const res = p.run('a').value;
+      expect(res.isLeft).toBe.false;
+    },
+    () => {
+      const p = either (char ('a'));
+      const res = p.run('b').value;
+      expect(res.isLeft).toBe.true;
+    },
+    () => {
+      const p = either (fail ('nope!'));
+      const res = p.run('b').value;
+      expect(res.isLeft).toBe.true;
+      expect(res.value[1]).toEqual('nope!');
+    }
   ]
 );
 
