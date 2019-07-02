@@ -1,59 +1,69 @@
-# Arcsecond
+# Arcsecond 2.0.0
 
-Arcsecond is a Fantasy Land compliant javascript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
-
-<a href="https://github.com/francisrstokes/arcsecond-binary">For parsing binary data, `arcsecond` can be used with `arcsecond-binary`.</a>
+Arcsecond is a zero-dependency, Fantasy Land compliant JavaScript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
 ---
 
 - [Arcsecond](#arcsecond)
-  - [Introduction](#introduction)
-    - [A simple parser](#a-simple-parser)
-    - [Improving the simple parser](#improving-the-simple-parser)
-    - [Note on currying](#note-on-currying)
-    - [Note on error handling](#note-on-error-handling)
+  - [Release Notes](#release-notes)
   - [Installation](#installation)
+  - [Tutorial](#tutorial)
   - [Usage](#usage)
   - [Running the examples](#running-the-examples)
   - [API](#api)
-    - [parse](#parse)
-    - [char](#char)
-    - [str](#str)
-    - [digit](#digit)
-    - [digits](#digits)
-    - [letter](#letter)
-    - [letters](#letters)
-    - [whitespace](#whitespace)
-    - [anyOfString](#anyofstring)
-    - [regex](#regex)
-    - [sequenceOf](#sequenceof)
-    - [namedSequenceOf](#namedsequenceof)
-    - [choice](#choice)
-    - [lookAhead](#lookahead)
-    - [sepBy](#sepby)
-    - [sepBy1](#sepby1)
-    - [many](#many)
-    - [many1](#many1)
-    - [between](#between)
-    - [everythingUntil](#everythinguntil)
-    - [anythingExcept](#anythingexcept)
-    - [possibly](#possibly)
-    - [endOfInput](#endofinput)
-    - [skip](#skip)
-    - [pipeParsers](#pipeparsers)
-    - [composeParsers](#composeparsers)
-    - [takeRight](#takeright)
-    - [takeLeft](#takeleft)
-    - [recursiveParser](#recursiveparser)
-    - [tapParser](#tapparser)
-    - [decide](#decide)
-    - [mapTo](#mapto)
-    - [leftMapTo](#leftmapto)
-    - [fail](#fail)
-    - [succeedWith](#succeedwith)
-    - [either](#either)
-    - [toPromise](#topromise)
-    - [toValue](#tovalue)
+    - [Parser Methods](#methods)
+      - [.run](#.run)
+      - [.fork](#.fork)
+      - [.map](#.map)
+      - [.chain](#.chain)
+      - [.mapFromData](#.mapFromData)
+      - [.chainFromData](#.chainFromData)
+      - [.errorChain](#.errorChain)
+    - [Functions](#functions)
+      - [setData](#setData)
+      - [withData](#withData)
+      - [mapData](#mapData)
+      - [getData](#getData)
+      - [coroutine](#coroutine)
+      - [char](#char)
+      - [str](#str)
+      - [digit](#digit)
+      - [digits](#digits)
+      - [letter](#letter)
+      - [letters](#letters)
+      - [whitespace](#whitespace)
+      - [optionalWhitespace](#optionalWhitespace)
+      - [anyOfString](#anyOfString)
+      - [regex](#regex)
+      - [sequenceOf](#sequenceOf)
+      - [namedSequenceOf](#namedSequenceOf)
+      - [choice](#choice)
+      - [lookAhead](#lookAhead)
+      - [sepBy](#sepBy)
+      - [sepBy1](#sepBy1)
+      - [many](#many)
+      - [many1](#many1)
+      - [between](#between)
+      - [everythingUntil](#everythingUntil)
+      - [anythingExcept](#anythingExcept)
+      - [possibly](#possibly)
+      - [endOfInput](#endOfInput)
+      - [skip](#skip)
+      - [pipeParsers](#pipeParsers)
+      - [composeParsers](#composeParsers)
+      - [takeRight](#takeRight)
+      - [takeLeft](#takeLeft)
+      - [recursiveParser](#recursiveParser)
+      - [tapParser](#tapParser)
+      - [decide](#decide)
+      - [mapTo](#mapTo)
+      - [errorMapTo](#errorMapTo)
+      - [fail](#fail)
+      - [succeedWith](#succeedWith)
+      - [either](#either)
+      - [toPromise](#toPromise)
+      - [toValue](#toValue)
+      - [parse](#parse)
   - [A note on recursive grammars](#a-note-on-recursive-grammars)
   - [Fantasy Land](#fantasy-land)
     - [Equivalent Operations](#equivalent-operations)
@@ -63,255 +73,9 @@ Arcsecond is a Fantasy Land compliant javascript [Parser Combinator](https://en.
       - [ap](#ap)
   - [Name](#name)
 
+## Release Notes
 
-## Introduction
-
-### A simple parser
-
-A __Parser Combinator__ is a parser made by composing smaller parsers. For example, to parse strings like:
-
-```
-"Weather (today): Sunny"
-"Weather (yesterday): Cloudy"
-"Weather (one week ago): Rainy"
-```
-
-We might break this down into a few different parsers:
-
-- One that can identify the literal string "Weather"
-- One that can identify a known time string inside brackets
-- One that can identify a known weather type
-
-These 3 parsers can then be combined into a single parser that is able to identify all those parts correctly as a structure. The following is how this would look using arcsecond:
-
-```javascript
-const {
-  str,
-  sequenceOf,
-  choice,
-  char,
-  parse
-} = require('arcsecond');
-
-const weatherString = str ('Weather');
-
-const timeString = sequenceOf ([
-  char ('('),
-  choice ([
-    str ('today'),
-    str ('yesterday'),
-    str ('one week ago')
-  ]),
-  char (')')
-]);
-
-const weatherType = choice ([
-  str ('Sunny'),
-  str ('Cloudy'),
-  str ('Rainy')
-]);
-
-const fullParser = sequenceOf ([
-  weatherString,
-  char (' '),
-  timeString,
-  str (': '),
-  weatherType
-]);
-
-// Create a function that can take a string and run our parser
-const parseWeatherData = parse(fullParser);
-
-parseWeatherData('Weather (today): Sunny').value
-//  -> [ 'Weather', ' ', [ '(', 'today', ')' ], ': ', 'Sunny' ]
-
-```
-
-
-This gives us all the data that the different parsers extracted. The `sequenceOf` function collects values from each parser in the sequence and places it into an array. Since the `timeString` parser also uses `sequenceOf`, its return value is also an array.
-
-### Improving the simple parser
-
-There are a couple of changes that would already improve this parser a lot. The first is that we are keeping all the data we are parsing, even though we don't need most of it. All we really need is the "time" string and the "weather type" string. First of all, let's make the `timeString` parser only return the string we care about.
-
-```javascript
-const {
-  str,
-  sequenceOf,
-  choice,
-  char,
-  parse,
-  pipeParsers,  // +added
-  mapTo,        // +added
-} = require('arcsecond');
-
-// ...
-
-const timeString = pipeParsers ([
-  sequenceOf ([
-    char ('('),
-    choice ([
-      str ('today'),
-      str ('yesterday'),
-      str ('one week ago')
-    ]),
-    char (')')
-  ]),
-  mapTo (([lbracket, timeStr, rbracket]) => timeStr)
-])
-
-// ...
-
-parseWeatherData('Weather (today): Sunny').value
-//  -> [ 'Weather', ' ', 'today', ': ', 'Sunny' ]
-```
-
-So the change uses `pipeParsers`, which takes an array of parsers, in order to pass the result of one parser to the next one in the list. `mapTo` lets us get get at the value and map it to something else. In this case we can deconstruct the array that `sequenceOf` returned and just give back the string.
-
-Running the same string again, we just get the string we were interested in. Since we also don't care about the "Weather" string, and all the separators, we can use the same technique of `pipeParsers` + `mapTo` to rewrite `fullParser`:
-
-```javascript
-
-// ...
-
-const fullParser = pipeParsers ([
-  sequenceOf ([
-    weatherString,
-    char (' '),
-    timeString,
-    str (': '),
-    weatherType
-  ]),
-  mapTo (([weatherStr, space, timeStr, colonStr, weatherType]) => {
-    return {
-      time: timeStr,
-      weatherType: weatherType
-    };
-  })
-]);
-
-// ...
-
-parseWeatherData('Weather (today): Sunny').value
-//  -> { time: 'today', weatherType: 'Sunny' }
-```
-
-Now we've thrown away all the useless information and only got what we really care about, in a data structure we've defined.
-
-The parser is still a little bit weak though, because we can't parse more interesting time strings like "two weeks ago" or "three days ago". We can easily add this support by writing a `complexTimeString` parser for it:
-
-```javascript
-const {
-  str,
-  sequenceOf,
-  choice,
-  char,
-  parse,
-  pipeParsers,
-  mapTo,
-  letters   // +added
-} = require('arcsecond');
-
-// ...
-
-const pluralTime = pipeParsers ([
-  sequenceOf ([
-    letters,
-    char (' '),
-    choice ([
-      str ('hours'),
-      str ('days'),
-      str ('weeks')
-    ])
-  ]),
-  mapTo (strings => strings.join(''))
-]);
-
-const complexTimeString = pipeParsers ([
-  sequenceOf ([
-    choice ([
-      str ('one hour'),
-      str ('one day'),
-      str ('one week'),
-      pluralTime
-    ]),
-    str (' ago')
-  ]),
-  mapTo (strings => strings.join(''))
-]);
-
-const timeString = pipeParsers ([
-  sequenceOf ([
-    char ('('),
-    choice ([
-      str ('today'),
-      str ('yesterday'),
-      complexTimeString
-    ]),
-    char (')')
-  ]),
-  mapTo (([lbracket, timeStr, rbracket]) => timeStr)
-]);
-
-// ...
-
-parseWeatherData('Weather (three hours ago): Cloudy').value
-//  -> { time: 'three hours ago', weatherType: 'Cloudy' }
-```
-
-Now we can handle more complex time strings. Of course in this example, something like "Weather (panda days ago): Sunny" is considered to be a valid string, because we don't have a parser for numbers spelled out as words. Implementing a parser to handle this case is left as an exercise for the reader.
-
-More useful examples, like a json parser, can be found in the [examples](examples/) directory of this repository.
-
-### Note on currying
-
-This library makes use for curried functions, which is a fancy way of saying that all the functions this library only take one argument. If they need to take more than one argument, they instead return a new function that takes the next argument.
-
-```javascript
-/*
-  Non curried function
-  Takes a and b as arguments
-*/
-const add = (a, b) => a + b;
-// add(1, 2) -> 3
-
-/*
-  Curried Version
-  Takes a as an argument, then returns a function that takes b as an argument
-*/
-const addCurried = a => b => a + b
-// addCurried(1)(2) -> 3
-```
-
-If none of this makes sense to you, [give this article a read](https://www.sitepoint.com/currying-in-functional-javascript/).
-
-### Note on error handling
-
-The return type of `parse (parser) (string)` is an [Either](https://github.com/folktale/data.either). This is a special data type that can represent *either* a success or a failure. It does this by actually being made of two types, called `Left` and `Right` (which you can think of as `Error` and `Success` respectively). If you understand how `Promise`s work in javascript then you already intuitively understand `Either`, because `Promises`s have a `Resolve` and a `Reject` type.
-
-You can get at the value of the `Either` using the `fold` method it exposes:
-
-```javascript
-const value = parse(parser)(string).fold(onErrorFn, onSuccessFn);
-```
-
-If you prefer to not work with the `Either` type, you can convert it to a promise:
-
-```javascript
-toPromise(parse(parser)(string))
-  .then(onSuccessFn)
-  .catch(onErrorFn);
-```
-
-Or you can convert it to a value directly, where an error will be thrown if one is present:
-
-```javascript
-try {
-  const value = toValue(parse(parser)(string));
-} catch (ex) {
-  // handle the error here
-}
-```
+[Since version 2.0.0, the release notes track changes to arcsecond.](./release-notes.md)
 
 ## Installation
 
@@ -319,12 +83,42 @@ try {
 npm i arcsecond
 ```
 
+## Tutorials
+
+The tutorials provide a practical introduction to many of the concepts in arcsecond, starting from the most basic foundations and working up to more complex topics.
+
+- [1. Parsing weather data](tutorial/tutorial-part-1.md)
+- [2. Extracting useful information](tutorial/tutorial-part-2.md)
+- [3. Error handling](tutorial/tutorial-part-3.md)
+- [4. Building utility parsers](tutorial/tutorial-part-4.md)
+- [5. Recursive Structures](tutorial/tutorial-part-5.md)
+- [6. Debugging](tutorial/tutorial-part-6.md)
+- [7. Stateful parsing](tutorial/tutorial-part-7.md)
+
 ## Usage
 
-```javascript
+You can use ES6 imports or CommonJS requires.
+
+```JavaScript
 const {parse, char} = require('arcsecond');
 
-parse (char ('a')) ('abc123');
+const parsingResult = char('a').fork(
+  // The string to parse
+  'abc123',
+
+  // The error handler (you can also return from this function!)
+  (error, parsingState) => {
+    const e = new Error(error);
+    e.parsingState = parsingState;
+    throw e;
+  },
+
+  // The success handler
+  (result, parsingState) => {
+    console.log(`Result: ${result}`);
+    return result;
+  }
+);
 ```
 
 ## Running the examples
@@ -344,151 +138,709 @@ The examples are built as es6 modules, which means they need node to be launched
 
 *Non-essential note on the types:* This documentation is using [Hindley-Milner type signatures](https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system) to show the types of function arguments and the return value.
 
-The two main "types" in arcsecond are `Parser e a b` and `ParserState e a`, which are defined as:
+The main "type" in arcsecond is `Parser e a s`:
 
-`type ParserState e a = Either (Int, e) (Int, String, a)`
+- The `e` refers to a possible error which this parser may generate.
+- The `a` refers to a possible value which this parser may capture.
+- The `s` refers to a general user-defined state associated with the parser.
 
-`type Parser e a b = () -> ParserState e a -> ParserState e b`
+### Methods
 
-Which is to say that a `Parser e a b` is a type that describes taking a `ParserState e a` to a `ParserState e b`, where `e` is the the error.
+#### .run
 
-### parse
+`.run :: Parser e a s ~> x -> Either e a`
 
-`parse :: Parser e a b -> String -> Either (Int, e) b`
-
-`parse` takes a parser function and a string, and returns the result of parsing the string using the parser.
+`.run` is a method on every parser, which takes a string, and returns the result of parsing the string using the parser.
 
 **Example**
-```javascript
-parse (str ('hello')) ('hello')
-// -> Either.Right('hello')
+```JavaScript
+str('hello').run('hello')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### char
+#### .fork
 
-`char :: Char -> Parser String a String`
+`.fork :: Parser e a s ~> x -> (e -> ParserState e a s -> f) -> (a -> ParserState e a s -> b)`
+
+The `.fork` method is similar to `.run`. It takes a string, an *error transforming function* and a *success transforming function*, and parses the string. If parsing was successful, the result is transformed using the *success transforming function* and returned. If parsing was not successful, the result is transformed using the *error transforming function* and returned.
+
+**Example**
+```JavaScript
+str('hello').fork(
+  'hello',
+  (errorMsg, parsingState) => {
+    console.log(errorMsg);
+    console.log(parsingState);
+    return "goodbye"
+  },
+  (result, parsingState) => {
+    console.log(parsingState);
+    return result;
+  }
+);
+// [console.log] Object {isError: false, error: null, target: "hello", data: null, index: 5, …}
+// -> "hello"
+
+str('hello').fork(
+  'farewell',
+  (errorMsg, parsingState) => {
+    console.log(errorMsg);
+    console.log(parsingState);
+    return "goodbye"
+  },
+  (result, parsingState) => {
+    console.log(parsingState);
+    return result;
+  }
+);
+// [console.log] ParseError (position 0): Expecting string 'hello', got 'farew...'
+// [console.log] Object {isError: true, error: "ParseError (position 0): Expecting string 'hello',…", target: "farewell", data: null, index: 0, …}
+// "goodbye"
+```
+
+#### .map
+
+`.map :: Parser e a s ~> (a -> b) -> Parser e b s`
+
+`.map` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This method can be used to apply structure or transform the values as they are being parsed.
+
+**Example**
+```JavaScript
+const newParser = letters.map(x => ({
+  matchType: 'string',
+  value: x
+});
+
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: {
+//        matchType: "string",
+//        value: "hello"
+//      },
+//      index: 5,
+//      data: null
+//    }
+```
+
+#### .chain
+
+`.chain :: Parser e a s ~> (a -> Parser e b s) -> Parser e b s`
+
+`.chain` takes a function which recieves the last matched value and should return a parser. That parser is then used to parse the following input, forming a chain of parsers based on previous input. `.chain` is the fundamental way of creating *contextual parsers*.
+
+**Example**
+```JavaScript
+
+const lettersThenSpace = sequenceOf([
+  letters,
+  char(' ')
+]).map(x => x[0]);
+
+const newParser = lettersThenSpace.chain(matchedValue => {
+  switch (matchedValue) {
+    case 'number': return digits;
+
+    case 'string': return letters;
+
+    case 'bracketed': return sequenceOf([
+      char('('),
+      letters,
+      char(')')
+    ]).map(values => values[1]);
+
+    default: return fail('Unrecognised input type');
+  }
+});
+
+newParser.run('string Hello')
+// -> {
+//      isError: false,
+//      result: "Hello",
+//      index: 12,
+//      data: null
+//    }
+
+newParser.run('number 42')
+// -> {
+//      isError: false,
+//      result: "42",
+//      index: 9,
+//      data: null
+//    }
+
+newParser.run('bracketed (arcsecond)')
+// -> {
+//      isError: false,
+//      result: "arcsecond",
+//      index: 21,
+//      data: null
+//    }
+
+newParser.run('nope nothing')
+// -> {
+//      isError: true,
+//      error: "Unrecognised input type",
+//      index: 5,
+//      data: null
+//    }
+```
+
+#### .mapFromData
+
+`.mapFromData :: Parser e a s ~> (StateData a s -> b) -> Parser e b s`
+
+`.mapFromData` is almost the same as `.map`, except the function which it is passed also has access to the *internal state data*, and can thus transform values based on this data.
+
+**Example**
+```JavaScript
+
+const parserWithData = withData(letters.mapFromData(({result, data}) => ({
+  matchedValueWas: result,
+  internalDataWas: data
+})));
+
+parserWithData(42).run('hello');
+// -> {
+//      isError: false,
+//      result: {
+//        matchedValueWas: "hello",
+//        internalDataWas: 42
+//      },
+//      index: 5,
+//      data: 42
+//    }
+```
+
+#### .chainFromData
+
+`.chainFromData :: Parser e a s ~> (StateData a s -> Parser f b t) -> Parser f b t`
+
+`.chainFromData` is almost the same as `.chain`, except the function which it is passed also has access to the *internal state data*, and can choose how parsing continues based on this data.
+
+**Example**
+```JavaScript
+const lettersThenSpace = sequenceOf([
+  letters,
+  char(' ')
+]).map(x => x[0]);
+
+const parser = withData(lettersThenSpace.chainFromData(({result, data}) => {
+  if (data.bypassNormalApproach) {
+    return digits;
+  }
+
+  return letters;
+}));
+
+parser({ bypassNormalApproach: false }).run('hello world');
+// -> {
+//      isError: false,
+//      result: "world",
+//      index: 11,
+//      data: { bypassNormalApproach: false }
+//    }
+
+parser({ bypassNormalApproach: true }).run('hello world');
+// -> {
+//      isError: true,
+//      error: "ParseError (position 6): Expecting digits",
+//      index: 6,
+//      data: { bypassNormalApproach: true }
+//    }
+```
+
+#### .errorChain
+
+`.errorChain :: Parser e a s ~> ((e, Integer, s) -> Parser f a s) -> Parser f a s`
+
+`.errorChain` is almost the same as `.chain`, except that it only runs if there is an error in the parsing state. This is a useful method when either trying to recover from errors, or for when a more specific error message should be constructed.
+
+**Example**
+```JavaScript
+
+const parser = digits.errorChain(({error, index, data}) => {
+  console.log('Recovering...');
+  return letters;
+});
+
+p.run('42');
+// -> {
+//      isError: false,
+//      result: "42",
+//      index: 2,
+//      data: null
+//    }
+
+p.run('hello');
+// [console.log] Recovering...
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
+
+s = parser.run('');
+// [console.log] Recovering...
+// -> {
+//     isError: true,
+//     error: "ParseError (position 0): Expecting letters",
+//     index: 0,
+//     data: null
+//   }
+```
+
+### Functions
+
+#### setData
+
+`setData :: t -> Parser e a t`
+
+`setData` takes anything that should be set as the *internal state data*, and returns a parser that will perform that side effect when the parser is run. This does not consume any input. If parsing is currently in an errored state, then the data **will not** be set.
+
+**Example**
+```JavaScript
+const parser = coroutine(function* () {
+  const name = yield letters;
+
+  if (name === 'Jim') {
+    yield setData('The name is Jim');
+  }
+
+  return name;
+});
+
+parser.run('Jim');
+// -> {
+//      isError: false,
+//      result: "Jim",
+//      index: 3,
+//      data: "The name is Jim"
+//    }
+```
+
+If dealing with any complex level of state - such as an object where individual keys will be updated or required, then it can be useful to create utility parsers to assist with updating the *internal state data*.
+One possible pattern that could be used is the reducer pattern, famed by redux:
+
+**Example**
+```JavaScript
+
+const createStateReducer = reducer => action => getData.chain(state => setData(reducer(state, action)));
+
+const updateCounterState = createStateReducer((state = 0, action) => {
+  switch (action.type) {
+    case 'INC': {
+      return state + 1;
+    }
+    case 'DEC': {
+      return state - 1;
+    }
+    case 'ADD': {
+      return state + action.payload;
+    }
+    case 'RESET': {
+      return 0;
+    }
+  }
+});
+
+const parser = coroutine(function* () {
+  let count = yield updateCounterState({ type: 'RESET' });
+  console.log(count);
+
+  yield updateCounterState({ type: 'INC' });
+  yield updateCounterState({ type: 'INC' });
+  yield updateCounterState({ type: 'DEC' });
+  count = yield updateCounterState({ type: 'INC' });
+  console.log(count);
+
+  return yield updateCounterState({ type: 'ADD', payload: 10 });
+});
+
+parser.run('Parser is not looking at the text!');
+// [console.log] 0
+// [console.log] 2
+// -> {
+//      isError: false,
+//      result: 12,
+//      index: 0,
+//      data: 12
+//    }
+```
+
+
+#### withData
+
+`withData :: Parser e a x -> s -> Parser e a s`
+
+`withData` a *provided parser*, and returns a function waiting for some *state data* to set, and then returns a new parser. That parser, when run, ensures that the *state data* is set as the *internal state data* before the *provided parser* runs.
+
+**Example**
+```JavaScript
+const parserWithoutData = letters;
+const parser = withData(parserWithoutData);
+
+parser("hello world!").run('Jim');
+// -> {
+//      isError: false,
+//      result: "Jim",
+//      index: 3,
+//      data: "hello world!"
+//    }
+
+parserWithoutData.run('Jim');
+// -> {
+//      isError: false,
+//      result: "Jim",
+//      index: 3,
+//      data: null
+//    }
+```
+
+#### mapData
+
+`mapData :: (s -> t) -> Parser e a t`
+
+`mapData` takes a function that recieves and returns some *state data*, and transforms the *internal state data* using the function, without consuming any input.
+
+**Example**
+```JavaScript
+const parser = withData(mapData(s => s.toUpperCase()));
+
+parser("hello world!").run('Jim');
+// -> {
+//      isError: false,
+//      result: null,
+//      index: 0,
+//      data: "HELLO WORLD!"
+//    }
+```
+
+#### getData
+
+`getData :: Parser e s s`
+
+`getData` is a parser that will always return what is contained in the *internal state data*, without consuming any input.
+
+**Example**
+```JavaScript
+const parser = withData(sequenceOf([
+  letters,
+  digits,
+  getData
+]));
+
+parser("hello world!").run('Jim1234');
+// -> {
+//      isError: false,
+//      result: ["Jim", "1234", "hello world!"],
+//      index: 3,
+//      data: "hello world!"
+//    }
+```
+
+If dealing with any complex level of state - such as an object where individual keys will be updated or required, then it can be useful to create utility parsers to assist.
+
+**Example**
+```JavaScript
+
+const selectData = selectorFn => getData.map(selectorFn);
+
+const parser = withData(coroutine(function* () {
+  // Here we can take or transform the state
+  const occupation = yield selectState(({job}) => job);
+  const initials = yield selectState(({firstName, lastName}) => `${firstName[0]}${lastName[0]}`);
+
+  console.log(`${initials}: ${occupation}`);
+
+  const first = yield letters;
+  const second = yield digits;
+
+  return `${second}${first}`;
+}));
+
+parser({
+  firstName: "Francis",
+  lastName: "Stokes",
+  job: "Developer"
+}).run('Jim1234');
+// [console.log] FS: Developer
+// -> {
+//      isError: false,
+//      result: "1234Jim",
+//      index: 3,
+//      data: {
+//        firstName: "Francis",
+//        lastName: "Stokes",
+//        job: "Developer"
+//      }
+//    }
+```
+
+#### coroutine
+
+`coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s`
+
+`coroutine` takes a generator function, in which parsers are `yield`ed. `coroutine` allows you to write parsers in a more imperative and sequential way - in much the same way `async/await` allows you to write code with promises in a more sequential way.
+
+Inside of the generator function, you can use all regular JavaScript language features, like loops, variable assignments, and conditional statements. This makes it easy to write very powerful parsers using `coroutine`, but on the other side it can lead to less readable, more complex code.
+
+Debugging is also much easier, as breakpoints can be easily added, and values logged to the console after they have been parsed.
+
+**Example**
+```JavaScript
+const parser = coroutine(function* () {
+  // Capture some letters and assign them to a variable
+  const name = yield letters;
+
+  // Capture a space
+  yield char(' ');
+
+  const age = yield digits.map(Number);
+
+  // Capture a space
+  yield char(' ');
+
+  if (age > 18) {
+    yield str('is an adult');
+  } else {
+    yield str('is a child');
+  }
+
+  return { name, age };
+});
+
+parser.run('Jim 19 is an adult');
+// -> {
+//      isError: false,
+//      result: { name: "Jim", age: 19 },
+//      index: 18,
+//      data: null
+//    }
+
+parser.run('Jim 17 is an adult');
+// -> {
+//      isError: true,
+//      error: "ParseError (position 7): Expecting string 'is a child', got 'is an adul...'",
+//      index: 7,
+//      data: null
+//    }
+```
+
+#### char
+
+`char :: Char -> Parser e Char s`
 
 `char` takes a character and returns a parser that matches that character **exactly one** time.
 
 **Example**
-```javascript
-parse (char ('h')) ('hello')
-// -> Either.Right('h')
+```JavaScript
+char ('h').run('hello')
+// -> {
+//      isError: false,
+//      result: "h",
+//      index: 1,
+//      data: null
+//    }
 ```
 
-### str
+#### str
 
-`str :: String -> Parser String a String`
+`str :: String -> Parser e String s`
 
 `str` takes a string and returns a parser that matches that string **exactly one** time.
 
 **Example**
-```javascript
-parse (str ('hello')) ('hello world')
-// -> Either.Right('hello')
+```JavaScript
+str('hello').run('hello world')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### digit
+#### digit
 
-`digit :: Parser String a String`
+`digit :: Parser e String s`
 
 `digit` is a parser that matches **exactly one** numerical digit `/[0-9]/`.
 
 **Example**
-```javascript
-parse (digit) ('99 bottles of beer on the wall')
-// -> Either.Right('9')
+```JavaScript
+digit.run('99 bottles of beer on the wall')
+// -> {
+//      isError: false,
+//      result: "9",
+//      index: 1,
+//      data: null
+//    }
 ```
 
-### digits
+#### digits
 
-`digits :: Parser String a String`
+`digits :: Parser e String s`
 
 `digits` is a parser that matches **one or more** numerical digit `/[0-9]/`.
 
 **Example**
-```javascript
-parse (digits) ('99 bottles of beer on the wall')
-// -> Either.Right('99')
+```JavaScript
+digits.run('99 bottles of beer on the wall')
+// -> {
+//      isError: false,
+//      result: "99",
+//      index: 2,
+//      data: null
+//    }
 ```
 
-### letter
+#### letter
 
-`letter :: Parser String a String`
+`letter :: Parser e Char s`
 
 `letter` is a parser that matches **exactly one** alphabetical letter `/[a-zA-Z]/`.
 
 **Example**
-```javascript
-parse (letter) ('hello world')
-// -> Either.Right('h')
+```JavaScript
+letter.run('hello world')
+// -> {
+//      isError: false,
+//      result: "h",
+//      index: 1,
+//      data: null
+//    }
 ```
 
-### letters
+#### letters
 
-`letters :: Parser String a String`
+`letters :: Parser e Char s`
 
 `letters` is a parser that matches **one or more** alphabetical letter `/[a-zA-Z]/`.
 
 **Example**
-```javascript
-parse (letters) ('hello world')
-// -> Either.Right('hello')
+```JavaScript
+letters.run('hello world')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### whitespace
+#### whitespace
 
-`whitespace :: Parser e a String`
+`whitespace :: Parser e String s`
 
-`whitespace` is a parser that matches **zero or more** whitespace characters.
+`whitespace` is a parser that matches **one or more** whitespace characters.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   str ('hello'),
   whitespace,
   str ('world')
 ]);
 
-parse (newParser) ('hello           world')
-// -> Either.Right([ 'hello', '           ', 'world' ])
+newParser.run('hello           world')
+// -> {
+//      isError: false,
+//      result: [ "hello", "           ", "world" ],
+//      index: 21,
+//      data: null
+//    }
 
-parse (newParser) ('helloworld')
-// -> Either.Right([ 'hello', '', 'world' ])
+newParser.run('helloworld')
+// -> {
+//      isError: true,
+//      error: "ParseError 'many1' (position 5): Expecting to match at least one value",
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### anyOfString
+#### optionalWhitespace
 
-`anyOfString :: String -> Parser String a String`
+`optionalWhitespace :: Parser e String s`
+
+`optionalWhitespace` is a parser that matches **zero or more** whitespace characters.
+
+**Example**
+```JavaScript
+const newParser = sequenceOf ([
+  str ('hello'),
+  optionalWhitespace,
+  str ('world')
+]);
+
+newParser.run('hello           world')
+// -> {
+//      isError: false,
+//      result: [ "hello", "           ", "world" ],
+//      index: 21,
+//      data: null
+//    }
+
+newParser.run('helloworld')
+// -> {
+//      isError: false,
+//      result: [ "hello", "", "world" ],
+//      index: 10,
+//      data: null
+//    }
+```
+
+#### anyOfString
+
+`anyOfString :: String -> Parser e Char s`
 
 `anyOfString` takes a string and returns a parser that matches **exactly one** character from that string.
 
 **Example**
-```javascript
-parse (anyOfString ('aeiou')) ('unusual string')
-// -> Either.Right('u')
+```JavaScript
+anyOfString('aeiou').run('unusual string')
+// -> {
+//      isError: false,
+//      result: "u",
+//      index: 1,
+//      data: null
+//    }
 ```
 
-### regex
+#### regex
 
-`regex :: RegExp -> Parser String a String`
+`regex :: RegExp -> Parser e String s`
 
 `regex` takes a RegExp and returns a parser that matches **as many characters** as the RegExp matches.
 
 **Example**
-```javascript
-parse (regex (/[hH][aeiou].{2}o/)) ('hello world')
-// -> Either.Right('hello')
+```JavaScript
+regex(/^[hH][aeiou].{2}o/).run('hello world')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### sequenceOf
+#### sequenceOf
 
-`sequenceOf :: [Parser e a b] -> Parser e a [b]`
+`sequenceOf :: [Parser * * *] -> Parser * [*] *`
+
+Note: `sequenceOf` cannot have an accurate type signature in JavaScript
 
 `sequenceOf` takes an array of parsers, and returns a new parser that matches each of them sequentially, collecting up the results into an array.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   str ('he'),
   letters,
@@ -496,20 +848,27 @@ const newParser = sequenceOf ([
   str ('world'),
 ])
 
-parse (newParser) ('hello world')
-// -> Either.Right([ 'he', 'llo', ' ', 'world' ])
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: [ "he", "llo", " ", "world" ],
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### namedSequenceOf
+#### namedSequenceOf
 
-`namedSequenceOf :: [(String, Parser e a b)] -> Parser e a (StrMap b)`
+`namedSequenceOf :: [(String, Parser * * *)] -> Parser e (StrMap *) s`
+
+Note: `namedSequenceOf` cannot have an accurate type signature in JavaScript
 
 `namedSequenceOf` takes an array of string/parser pairs, and returns a new parser that matches each of them sequentially, collecting up the results into an object where the key is the string in the pair.
 
 A pair is just an array in the form: `[string, parser]`
 
 **Example**
-```javascript
+```JavaScript
 const newParser = namedSequenceOf ([
   ['firstPart', str ('he')],
   ['secondPart', letters],
@@ -517,23 +876,30 @@ const newParser = namedSequenceOf ([
   ['forthPart', str ('world')],
 ])
 
-parse (newParser) ('hello world')
-// -> Either.Right({
-//      firstPart: 'he',
-//      secondPart: 'llo',
-//      thirdPart: ' ',
-//      forthPart: 'world'
-//    })
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: {
+//        firstPart: "he",
+//        secondPart: "llo",
+//        thirdPart: " ",
+//        forthPart: "world"
+//      },
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### choice
+#### choice
 
-`choice :: [Parser * a *] -> Parser * a *`
+`choice :: [Parser * * *] -> Parser * * *`
+
+Note: `choice` cannot have an accurate type signature in JavaScript
 
 `choice` takes an array of parsers, and returns a new parser that tries to match each one of them sequentially, and returns the first match. If `choice` fails, then it returns the error message of the parser that matched the most from the string.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = choice ([
   digit,
   char ('!'),
@@ -541,140 +907,218 @@ const newParser = choice ([
   str ('pineapple')
 ])
 
-parse (newParser) ('hello world')
-// -> Either.Right('hello')
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
 ```
 
 
-### lookAhead
+#### lookAhead
 
-`lookAhead :: Parser e a b -> Parser e a b`
+`lookAhead :: Parser e a s -> Parser e a s`
 
 `lookAhead` takes *look ahead* parser, and returns a new parser that matches using the *look ahead* parser, but without consuming input.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   str ('hello '),
   lookAhead (str ('world')),
   str ('wor')
 ]);
 
-parse (newParser) ('hello world')
-// -> Either.Right([ 'hello ', 'world', 'wor' ])
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: [ "hello ", "world", "wor" ],
+//      index: 9,
+//      data: null
+//    }
 ```
 
-### sepBy
+#### sepBy
 
-`sepBy :: Parser e a c -> Parser e a b -> Parser e a [b]`
+`sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s`
 
 `sepBy` takes two parsers - a *separator* parser and a *value* parser - and returns a new parser that matches **zero or more** values from the *value* parser that are separated by values of the *separator* parser. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sepBy (char (',')) (letters)
 
-parse (newParser) ('some,comma,separated,words')
-// -> Either.Right([ 'some', 'comma', 'separated', 'words' ])
+newParser.run('some,comma,separated,words')
+// -> {
+//      isError: false,
+//      result: [ "some", "comma", "separated", "words" ],
+//      index: 26,
+//      data: null
+//    }
 
-parse (newParser) ('')
-// -> Either.Right([])
+newParser.run('')
+// -> {
+//      isError: false,
+//      result: [],
+//      index: 0,
+//      data: null
+//    }
 
-parse (newParser) ('12345')
-// -> Either.Right([])
+newParser.run('12345')
+// -> {
+//      isError: false,
+//      result: [],
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### sepBy1
+#### sepBy1
 
-`sepBy1 :: Parser e a c -> Parser e a b -> Parser e a [b]`
+`sepBy1 :: Parser e a s -> Parser e b s -> Parser e [b] s`
 
 `sepBy1` is the same as `sepBy`, except that it matches **one or more** occurence.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sepBy1 (char (',')) (letters)
 
-parse (newParser) ('some,comma,separated,words')
-// -> Either.Right([ 'some', 'comma', 'separated', 'words' ])
+newParser.run('some,comma,separated,words')
+// -> {
+//      isError: false,
+//      result: [ "some", "comma", "separated", "words" ],
+//      index: 26,
+//      data: null
+//    }
 
-parse (newParser) ('1,2,3')
-// -> Either.Left([0, 'ParseError \'sepBy1\' (position 0): Expecting to match at least one separated value'])
+newParser.run('1,2,3')
+// -> {
+//      isError: true,
+//      error: "ParseError 'sepBy1' (position 0): Expecting to match at least one separated value",
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### many
+#### many
 
-`many :: Parser e a b -> Parser e a [b]`
+`many :: Parser e s a -> Parser e s [a]`
 
 `many` takes a parser and returns a new parser which matches that parser **zero or more** times. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = many (str ('abc'))
 
-parse (newParser) ('abcabcabcabc')
-// -> Either.Right([ 'abc', 'abc', 'abc', 'abc' ])
+newParser.run('abcabcabcabc')
+// -> {
+//      isError: false,
+//      result: [ "abc", "abc", "abc", "abc" ],
+//      index: 12,
+//      data: null
+//    }
 
-parse (newParser) ('')
-// -> Either.Right([])
+newParser.run('')
+// -> {
+//      isError: false,
+//      result: [],
+//      index: 0,
+//      data: null
+//    }
 
-parse (newParser) ('12345')
-// -> Either.Right([])
+newParser.run('12345')
+// -> {
+//      isError: false,
+//      result: [],
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### many1
+#### many1
 
-`many1 :: Parser e a b -> Parser e a [b]`
+`many1 :: Parser e s a -> Parser e s [a]`
 
 `many1` is the same as `many`, except that it matches **one or more** occurence.
 
 **Example**
-```javascript
-const newParser = many (str ('abc'))
+```JavaScript
+const newParser = many1 (str ('abc'))
 
-parse (newParser) ('abcabcabcabc')
-// -> Either.Right([ 'abc', 'abc', 'abc', 'abc' ])
+newParser.run('abcabcabcabc')
+// -> {
+//      isError: false,
+//      result: [ "abc", "abc", "abc", "abc" ],
+//      index: 12,
+//      data: null
+//    }
 
-parse (newParser) ('')
-// -> Either.Left('ParseError \'many1\' (position 0): Expecting to match at least one value')
+newParser.run('')
+// -> {
+//   isError: true,
+//   error: "ParseError 'many1' (position 0): Expecting to match at least one value",
+//   index: 0,
+//   data: null
+// }
 
-parse (newParser) ('12345')
-// -> Either.Left([0, 'ParseError \'many1\' (position 0): Expecting to match at least one value'])
+newParser.run('12345')
+// -> {
+//   isError: true,
+//   error: "ParseError 'many1' (position 0): Expecting to match at least one value",
+//   index: 0,
+//   data: null
+// }
 ```
 
+#### between
 
-
-### between
-
-`between :: Parser e a b -> Parser f a c -> Parser g a d -> Parser g a d`
+`between :: Parser e a s -> Parser e b s -> Parser e c s -> Parser e b s`
 
 `between` takes 3 parsers, a *left* parser, a *right* parser, and a *value* parser, returning a new parser that matches a value matched by the *value* parser, between values matched by the *left* parser and the *right* parser.
 
 This parser can easily be partially applied with `char ('(')` and `char (')')` to create a `betweenBrackets` parser, for example.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = between (char ('<')) (char ('>')) (letters);
 
-parse (newParser) ('<hello>')
-// -> Either.Right('hello')
+newParser.run('<hello>')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 7,
+//      data: null
+//    }
 
 const betweenBrackets = between (char ('(')) (char (')'));
 
-parse (betweenBrackets (many (letters))) ('(hello world)')
-// -> Either.Right([ 'hello', 'world' ])
+betweenBrackets (many (letters)).run('(hello world)')
+// -> {
+//      isError: true,
+//      error: "ParseError (position 6): Expecting character ')', got ' '",
+//      index: 6,
+//      data: null
+//    }
 ```
 
 
-### everythingUntil
+#### everythingUntil
 
-`everythingUntil :: Parser e a b -> Parser String a c`
+`everythingUntil :: Parser e a s -> Parser e String s`
 
 `everythingUntil` takes a *termination* parser and returns a new parser which matches everything up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
 
 **Example**
-```javascript
-parse (everythingUntil (char ('.'))) ('This is a sentence.This is another sentence')
-// -> Either.Right('This is a sentence')
+```JavaScript
+everythingUntil (char ('.')).run('This is a sentence.This is another sentence')
+// -> {
+//      isError: false,
+//      result: "This is a sentence",
+//      index: 18,
+//      data: null
+//    }
 
 // termination parser doesn't consume the termination value
 const newParser = sequenceOf ([
@@ -683,155 +1127,210 @@ const newParser = sequenceOf ([
 ]);
 
 
-parse (newParser) ('This is a sentence.This is another sentence')
-// -> Either.Left([18, 'ParseError (position 18): Expecting string \'This is another sentence\', got \'.This is another sentenc...\''])
+newParser.run('This is a sentence.This is another sentence')
+// -> {
+//      isError: true,
+//      error: "ParseError (position 18): Expecting string 'This is another sentence', got '.This is another sentenc...'",
+//      index: 18,
+//      data: null
+//    }
 ```
 
-### anythingExcept
+#### anythingExcept
 
-`anythingExcept :: Parser e a b -> Parser String a c`
+`anythingExcept :: Parser e a s -> Parser e Char s`
 
 `anythingExcept` takes a *exception* parser and returns a new parser which matches **exactly one** character, if it is not matched by the *exception* parser.
 
 **Example**
-```javascript
-parse (anythingExcept (char ('.'))) ('This is a sentence.')
-// -> Either.Right('T')
+```JavaScript
+anythingExcept (char ('.')).run('This is a sentence.')
+// -> {
+//   isError: false,
+//   result: "T",
+//   index: 1,
+//   data: null
+// }
 
 const manyExceptDot = many (anythingExcept (char ('.')))
-parse (manyExceptDot) ('This is a sentence.')
-// -> Either.Right([ 'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's', 'e', 'n', 't', 'e', 'n', 'c', 'e' ])
+manyExceptDot.run('This is a sentence.')
+// -> {
+//      isError: false,
+//      result: [ "T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "s", "e", "n", "t", "e", "n", "c", "e" ],
+//      index: 18,
+//      data: null
+//    }
 ```
 
-### possibly
+#### possibly
 
-`possibly :: Parser e a b -> Parser e a (b|null)`
+`possibly :: Parser e a s -> Parser e (a | Null) s`
 
 `possibly` takes an *attempt* parser and returns a new parser which tries to match using the *attempt* parser. If it is unsuccessful, it returns a null value and does not "consume" any input.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   possibly (str ('Not Here')),
   str ('Yep I am here')
 ]);
 
-parse (newParser) ('Yep I am here')
-// -> Either.Right([ null, 'Yep I am here' ])
+newParser.run('Yep I am here')
+// -> {
+//      isError: false,
+//      result: [ null, "Yep I am here" ],
+//      index: 13,
+//      data: null
+//    }
 ```
 
-### endOfInput
+#### endOfInput
 
-`endOfInput :: Parser e a b`
+`endOfInput :: Parser e Null s`
 
 `endOfInput` is a parser that only succeeds when there is no more input to be parsed.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   str ('abc'),
   endOfInput
 ]);
 
-parse (newParser) ('abc')
-// -> Either.Right([ 'abc', null ])
+newParser.run('abc')
+// -> {
+//      isError: false,
+//      result: [ "abc", null ],
+//      index: 3,
+//      data: null
+//    }
 
-parse (newParser) ('abcd')
-// -> Either.Left([ 3, 'ParseError \'endOfInput\' (position 3): Expected end of input but got \'d\'' ])
+newParser.run('')
+// -> {
+//      isError: true,
+//      error: "ParseError (position 0): Expecting string 'abc', but got end of input.",
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### skip
+#### skip
 
-`skip :: Parser e a b -> Parser e a a`
+`skip :: Parser e a s -> Parser e a s`
 
 `skip` takes a *skip* parser and returns a new parser which matches using the *skip* parser, but doesn't return its value, but instead the value of whatever came before it.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = pipeParsers ([
   str ('abc'),
   str('123'),
   skip (str ('def'))
 ])
 
-parse (newParser) ('abc123def')
-// -> Either.Right('123')
+newParser.run('abc123def')
+// -> {
+//      isError: false,
+//      result: "123",
+//      index: 9,
+//      data: null
+//    }
 ```
 
-### pipeParsers
+#### pipeParsers
 
 `pipeParsers :: [Parser * * *] -> Parser * * *`
 
 `pipeParsers` takes an array of parsers and composes them left to right, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = pipeParsers ([
   str ('hello'),
   char (' '),
   str ('world')
 ]);
 
-parse (newParser) ('hello world')
-// -> Either.Right('world')
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: "world",
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### composeParsers
+#### composeParsers
 
 `pipeParsers :: [Parser * * *] -> Parser * * *`
 
 `composeParsers` takes an array of parsers and composes them right to left, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = composeParsers ([
   str ('world'),
   char (' '),
   str ('hello')
 ]);
 
-parse (newParser) ('hello world')
-// -> Either.Right('world')
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: "world",
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### takeRight
+#### takeRight
 
-`takeRight :: Parser e a b -> Parser f b c -> Parser f a c`
+`takeRight :: Parser e a s -> Parser f b t -> Parser f b t`
 
 `takeRight` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *right*.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = takeRight (str ('hello ')) (str ('world'))
 
-parse (newParser) ('hello world')
-// -> Either.Right('world')
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: "world",
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### takeLeft
+#### takeLeft
 
-`takeLeft :: Parser e a b -> Parser f b c -> Parser e a b`
+`takeLeft :: Parser e a s -> Parser f b t -> Parser e a s`
 
 `takeLeft` takes two parsers, *left* and *right*, and returns a new parser that first matches the *left*, then the *right*, and keeps the value matched by the *left*.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = takeLeft (str ('hello ')) (str ('world'))
 
-parse (newParser) ('hello world')
-// -> Either.Right('hello ')
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### recursiveParser
+#### recursiveParser
 
-`recursiveParser :: (() => Parser e a b) -> Parser e a b`
+`recursiveParser :: (() => Parser e a s) -> Parser e a s`
 
-`recursiveParser` takes a function that returns a parser (a thunk), and returns that same parser. This is needed in order to create *recursive parsers* because javascript is not a "lazy" language.
+`recursiveParser` takes a function that returns a parser (a thunk), and returns that same parser. This is needed in order to create *recursive parsers* because JavaScript is not a "lazy" language.
 
 In the following example both the `value` parser and the `matchArray` parser are defined in terms of each other, so one must be one **must** be defined using `recursiveParser`.
 
 **Example**
-```javascript
+```JavaScript
 const value = recursiveParser (() => choice ([
   matchNum,
   matchStr,
@@ -846,18 +1345,23 @@ const matchNum = digits;
 const matchStr = letters;
 const matchArray = betweenSquareBrackets (commaSeparated (value));
 
-parse (spaceSeparated (value)) ('abc 123 [42,somethingelse] 45')
-// -> Either.Right([ 'abc', '123', [ '42', 'somethingelse' ], '45' ])
+spaceSeparated(value).run('abc 123 [42,somethingelse] 45')
+// -> {
+//      isError: false,
+//      result: [ "abc", "123", [ "42", "somethingelse" ], "45" ],
+//      index: 29,
+//      data: null
+//    }
 ```
 
-### tapParser
+#### tapParser
 
-`tapParser :: (a => void) -> Parser e a a`
+`tapParser :: (a => ()) -> Parser e a s`
 
 `tapParser` takes a function and returns a parser that does nothing and consumes no input, but runs the provided function on the last parsed value. This is intended as a debugging tool to see the state of parsing at any point in a sequential operation like `sequenceOf` or `pipeParsers`.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   letters,
   tapParser(console.log),
@@ -865,21 +1369,26 @@ const newParser = sequenceOf ([
   letters
 ]);
 
-parse (newParser) ('hello world')
-// -> [console.log]: 'hello'
-// -> Either.Right([ 'hello', ' ', 'world' ])
+newParser.run('hello world')
+// -> [console.log]: Object {isError: false, error: null, target: "hello world", data: null, index: 5, …}
+// -> {
+//      isError: false,
+//      result: [ "hello", "hello", " ", "world" ],
+//      index: 11,
+//      data: null
+//    }
 ```
 
-### decide
+#### decide
 
-`decide :: (a -> Parser e b c) -> Parser e b c`
+`decide :: (a -> Parser e b s) -> Parser e b s`
 
 `decide` takes a function that recieves the last matched value and returns a new parser. It's important that the function **always** returns a parser. If a valid one cannot be selected, you can always use [fail](#fail).
 
 `decide` allows an author to create a [context-sensitive grammar](https://en.wikipedia.org/wiki/Context-sensitive_grammar).
 
 **Example**
-```javascript
+```JavaScript
 const newParser = sequenceOf ([
   takeLeft (letters) (char (' ')),
   decide (v => {
@@ -891,24 +1400,39 @@ const newParser = sequenceOf ([
   })
 ]);
 
-parse (newParser) ('asDigits 1234')
-// -> Either.Right([ 'asDigits', '1234' ])
+newParser.run('asDigits 1234')
+// -> {
+//      isError: false,
+//      result: [ "asDigits", "1234" ],
+//      index: 13,
+//      data: null
+//    }
 
-parse (newParser) ('asLetters hello')
-// -> Either.Right([ 'asLetters', 'hello' ])
+newParser.run('asLetters hello')
+// -> {
+//      isError: false,
+//      result: [ "asLetters", "hello" ],
+//      index: 15,
+//      data: null
+//    }
 
-parse (newParser) ('asPineapple wayoh')
-// -> Either.Left([12, 'Unrecognised signifier \'asPineapple\''])
+newParser.run('asPineapple wayoh')
+// -> {
+//      isError: true,
+//      error: "Unrecognised signifier 'asPineapple'",
+//      index: 12,
+//      data: null
+//    }
 ```
 
-### mapTo
+#### mapTo
 
-`mapTo :: (a -> b) -> Parser e a b`
+`mapTo :: (a -> b) -> Parser e b s`
 
 `mapTo` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = pipeParsers([
   letters,
   mapTo(x => {
@@ -916,101 +1440,142 @@ const newParser = pipeParsers([
       matchType: 'string',
       value: x
     }
-  });
+  })
 ]);
 
-parse (newParser) ('hello world')
-// -> Either.Right({
-//      matchType: 'string',
-//      value: 'hello'
-//    })
+newParser.run('hello world')
+// -> {
+//      isError: false,
+//      result: {
+//        matchType: "string",
+//        value: "hello"
+//      },
+//      index: 5,
+//      data: null
+//    }
 ```
 
-### leftMapTo
+#### errorMapTo
 
-`leftMapTo :: ((e, Int) -> f) -> Parser f a b`
+`errorMapTo :: (ParserState e a s -> f) -> Parser f a s`
 
-`leftMapTo` is like [mapTo](#mapto) but it transforms the error value. The function passed to `leftMapTo` gets the *current error message* as its first argument and the *index* that parsing stopped at as the second.
+`errorMapTo` is like [mapTo](#mapto) but it transforms the error value. The function passed to `errorMapTo` gets the *current error message* as its first argument and the *index* that parsing stopped at as the second.
 
 **Example**
-```javascript
+```JavaScript
 const newParser = pipeParsers([
   letters,
-  leftMapTo((message, index) => `Old message was: [${message}] @ index ${index}`)
+  errorMapTo((message, index) => `Old message was: [${message}] @ index ${index}`)
 ]);
 
-parse (newParser) ('1234')
-// -> Either.Left([
-//      0,
-//      'Old message was: [ParseError \'many1\' (position 0): Expecting to match at least on value] @ index 0'
-//    ])
+newParser.run('1234')
+// -> {
+//      isError: true,
+//      error: "Old message was: [ParseError (position 0): Expecting letters] @ index 0",
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### fail
+#### fail
 
-`fail :: String -> Parser String a b`
+`fail :: e -> Parser e a s`
 
 `fail` takes an *error message* string and returns a parser that always fails with the provided *error message*.
 
 **Example**
-```javascript
-parse (fail ('Nope')) ('hello world')
-// -> Either.Left([0, 'Nope'])
+```JavaScript
+fail('Nope').run('hello world')
+// -> {
+//      isError: true,
+//      error: "Nope",
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### succeedWith
+#### succeedWith
 
-`succeedWith :: b -> Parser e a b`
+`succeedWith :: a -> Parser e a s`
 
 `succeedWith` takes an value and returns a parser that always matches that value and does not consume any input.
 
 **Example**
-```javascript
-parse (succeedWith ('anything')) ('hello world')
-// -> Either.Right('anything')
+```JavaScript
+succeedWith ('anything').run('hello world')
+// -> {
+//      isError: false,
+//      result: "anything",
+//      data: null
+//      index: 0,
+//    }
 ```
 
-### either
+#### either
 
-`either :: Parser e a b -> Parser e (Either f b) c`
+`either :: Parser e a s -> Parser e (Either e a) s`
 
 `either` takes a parser and returns a parser that will always succeed, but the captured value will be an Either, indicating success or failure.
 
 **Example**
-```javascript
-parse (either (fail('nope!')) ('hello world')
-// -> Either.Right(Either.Left([0, 'nope!']))
+```JavaScript
+either(fail('nope!')).run('hello world')
+// -> {
+//      isError: false,
+//      result: {
+//        isError: true,
+//        value: "nope!"
+//      },
+//      index: 0,
+//      data: null
+//    }
 ```
 
-### toPromise
+#### toPromise
 
-`toPromise :: Either a b -> Promise a b`
+`toPromise :: ParserResult e a s -> Promise (e, Integer, s) a`
 
-`toPromise` converts an `Either` type value (such as the one returned by `parse`), and converts it into a `Promise`.
+`toPromise` converts a `ParserResult` (what is returned from `.run`) into a `Promise`.
 
 **Example**
-```javascript
-const resultAsEither = parse (str ('hello')) ('hello world');
-const resultAsPromise = toPromise(resultAsEither);
+```JavaScript
+const parser = str('hello');
 
-resultAsPromise
+toPromise(parser.run('hello world'))
   .then(console.log)
-  .catch(console.error);
-// -> 'hello'
+  .catch(({error, index, data}) => {
+    console.log(error);
+    console.log(index);
+    console.log(data);
+  });
+// -> [console.log] hello
+
+toPromise(parser.run('goodbye world'))
+  .then(console.log)
+  .catch(({error, index, data}) => {
+    console.log('Error!');
+    console.log(error);
+    console.log(index);
+    console.log(data);
+  });
+// -> [console.log] Error!
+// -> [console.log] ParseError (position 0): Expecting string 'hello', got 'goodb...'
+// -> [console.log] 0
+// -> [console.log] null
 ```
 
-### toValue
+#### toValue
 
-`toValue :: Either a b -> b`
+`toValue :: ParserResult e a s -> a`
 
-`toValue` converts an `Either` type value (such as the one returned by `parse`), and converts it into a regular value. If there was a parsing error, it will be thrown, and must be handled in a try/catch block.
+`toValue` converts a `ParserResult` (what is returned from `.run`) into a regular value, and throws an error if the result contained one.
 
 **Example**
-```javascript
-const resultAsEither = parse (str ('hello')) ('hello world');
+```JavaScript
+const result = str ('hello').run('hello worbackgroiund<hAld');
 
 try {
-  const value = toValue(resultAsEither);
+  const value = toValue(result);
 } catch (parseError) {
   console.error(parseError.message)
 }
@@ -1021,11 +1586,28 @@ resultAsPromise
 // -> 'hello'
 ```
 
+#### parse
+
+`parse :: Parser e a s -> String -> s -> Either e a`
+
+`parse` takes a parser and a string, and returns the result of parsing the string using the parser.
+
+**Example**
+```JavaScript
+parse (str ('hello')) ('hello')
+// -> {
+//      isError: false,
+//      result: "hello",
+//      index: 5,
+//      data: null
+//    }
+```
+
 ## A note on recursive grammars
 
 If you're pasrsing a programming language, a configuration, or anything of sufficient complexity, it's likely that you'll need to define some parsers in terms of each other. You might want to do something like:
 
-```javascript
+```JavaScript
 const value = choice ([
   matchNum,
   matchStr,
@@ -1040,11 +1622,11 @@ const matchStr = letters;
 const matchArray = betweenSquareBrackets (commaSeparated (value));
 ```
 
-In this example, we are trying to define `value` in terms of `matchArray`, and `matchArray` in terms of `value`. This is problematic in a language like javascript because it is what's known as an ["eager language"](https://en.wikipedia.org/wiki/Eager_evaluation). Because the definition of `value` is a function call to `choice`, the arguments of `choice` must be fully evaluated, and of course none of them are yet. If we just move the definition below `matchNum`, `matchStr`, and `matchArray`, we'll have the same problem with `value` not being defined before `matchArray` wants to use it.
+In this example, we are trying to define `value` in terms of `matchArray`, and `matchArray` in terms of `value`. This is problematic in a language like JavaScript because it is what's known as an ["eager language"](https://en.wikipedia.org/wiki/Eager_evaluation). Because the definition of `value` is a function call to `choice`, the arguments of `choice` must be fully evaluated, and of course none of them are yet. If we just move the definition below `matchNum`, `matchStr`, and `matchArray`, we'll have the same problem with `value` not being defined before `matchArray` wants to use it.
 
-We can get around javascript's eagerness by using [recursiveParser](#recursiveparser), which takes a function that returns a parser:
+We can get around JavaScript's eagerness by using [recursiveParser](#recursiveparser), which takes a function that returns a parser:
 
-```javascript
+```JavaScript
 const value = recursiveParser(() => choice ([
   matchNum,
   matchStr,
@@ -1074,7 +1656,7 @@ Every parser, or parser made from composing parsers has a `.of`, `.map`, `.chain
 
 #### of
 
-```javascript
+```JavaScript
 Parser.of(42)
 
 // is equivalent to
@@ -1084,7 +1666,7 @@ succeedWith (42)
 
 #### map
 
-```javascript
+```JavaScript
 letters.map (fn)
 
 // is equivalent to
@@ -1094,7 +1676,7 @@ pipeParsers ([ letters, mapTo (fn) ])
 
 #### chain
 
-```javascript
+```JavaScript
 letters.chain (x => someOtherParser)
 
 // is equivalent to
@@ -1104,7 +1686,7 @@ pipeParsers ([ letters, decide (x => someOtherParser) ])
 
 #### ap
 
-```javascript
+```JavaScript
 letters.ap (Parser.of (fn))
 
 // is equivalent to
@@ -1117,4 +1699,4 @@ pipeParsers ([
 
 ## Name
 
-The name is also derrived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
+The name is also derived from parsec, which in astronomical terms is an ["astronomical unit [that] subtends an angle of one arcsecond"](https://en.wikipedia.org/wiki/Parsec).
