@@ -10,9 +10,6 @@ import {
 
 import {
   char,
-  mapTo,
-  pipeParsers,
-  parse,
   sequenceOf,
   str,
   choice,
@@ -21,7 +18,7 @@ import {
   many,
   anythingExcept,
   digits,
-  whitespace,
+  optionalWhitespace,
   between,
   anyOfString,
   recursiveParser
@@ -43,100 +40,66 @@ const parseJsonValue = recursiveParser(() => choice ([
   parseObject,
 ]));
 
-const escapedQuote = pipeParsers ([
-  sequenceOf ([ str ('\\'), anyOfString (`"'`) ]),
-  mapTo (x => x.join(''))
-]);
+const escapedQuote = sequenceOf ([ str ('\\'), anyOfString (`"'`) ]).map(x => x.join(''));
 
-const whitespaceSurrounded = parser => between (whitespace) (whitespace) (parser);
+const whitespaceSurrounded = parser => between (optionalWhitespace) (optionalWhitespace) (parser);
+const commaSeparated = sepBy (whitespaceSurrounded (char (',')));
+const orEmptyString = parser => possibly(parser).map(x => x ? x : '');
+const join = seperator => array => array.join(seperator);
 
-const parseBool = pipeParsers ([
-  choice([ str ('true'), str ('false') ]),
-  mapTo(JBoolean)
-]);
+const parseBool = choice([ str ('true'), str ('false') ]).map(JBoolean)
 
 const plusOrMinus = anyOfString ('+-');
 
-const parseFloat = pipeParsers([
-  sequenceOf([
-    possibly (plusOrMinus),
-    digits,
-    char ('.'),
-    digits
-  ]),
-  mapTo(([sign, lhs, _, rhs]) => `${sign ? sign : ''}${lhs}.${rhs}`)
-]);
+const parseFloat = sequenceOf([
+  orEmptyString(plusOrMinus),
+  digits,
+  char ('.'),
+  digits
+]).map(join(''));
 
-const parseInt = pipeParsers([
-  sequenceOf([ possibly (plusOrMinus), digits ]),
-  mapTo(([sign, x]) => `${sign ? sign : ''}${x}`)
-]);
+const parseInt = sequenceOf([ orEmptyString(plusOrMinus), digits ]).map(join(''))
 
-const parseScientificForm = pipeParsers([
-  sequenceOf([
-    choice ([ parseFloat, parseInt ]),
-    anyOfString ('eE'),
-    choice ([ parseFloat, parseInt ]),
-  ]),
-  mapTo (([lhs, _, rhs]) => `${lhs}e${rhs}`)
-]);
+const parseScientificForm = sequenceOf([
+  choice ([ parseFloat, parseInt ]),
+  anyOfString ('eE'),
+  choice ([ parseFloat, parseInt ]),
+]).map(join(''));
 
-const parseNumber = pipeParsers ([
-  choice([
-    parseScientificForm,
-    parseFloat,
-    parseInt,
-  ]),
-  mapTo (JNumber)
-]);
+const parseNumber = choice([
+  parseScientificForm,
+  parseFloat,
+  parseInt,
+]).map(JNumber);
 
-const parseNull = pipeParsers ([ str ('null'), mapTo (JNull) ]);
-
-const commaSeparated = sepBy (whitespaceSurrounded (char (',')));
+const parseNull = str ('null').map(JNull);
 
 const keyValueSeparator = whitespaceSurrounded (char (':'));
 
-const parseArray = pipeParsers ([
-  between (whitespaceSurrounded (char ('[')))
-          (whitespaceSurrounded (char (']')))
-          (commaSeparated (parseJsonValue)),
-  mapTo (JArray)
-]);
+const parseArray = between (whitespaceSurrounded (char ('[')))
+                            (whitespaceSurrounded (char (']')))
+                            (commaSeparated (parseJsonValue))
+                    .map(JArray);
 
-const parseString = pipeParsers ([
-  sequenceOf ([
-    char ('"'),
-    pipeParsers ([
-      many (choice ([
-        escapedQuote,
-        anythingExcept (char ('"')),
-      ])),
-      mapTo (x => x.join(''))
-    ]),
-    char ('"')
-  ]),
-  mapTo (x => JString(x.join('')))
-])
+const parseString = sequenceOf ([
+  char ('"'),
+  many (choice ([ escapedQuote, anythingExcept (char ('"')) ])).map(join('')),
+  char ('"')
+]).map(x => JString(x.join('')));
 
-const parseKeyValue = pipeParsers ([
-  whitespaceSurrounded (sequenceOf ([
-    parseString,
-    keyValueSeparator,
-    parseJsonValue,
-  ])),
-  mapTo (([key, _, value]) => JKeyValuePair(key, value)),
-]);
+const parseKeyValue = whitespaceSurrounded (sequenceOf ([
+  parseString,
+  keyValueSeparator,
+  parseJsonValue,
+])).map(([key, _, value]) => JKeyValuePair(key, value));
 
-const parseObject = pipeParsers ([
-  between (whitespaceSurrounded (char ('{')))
-          (whitespaceSurrounded (char ('}')))
-          (commaSeparated (parseKeyValue)),
-  mapTo (JObject),
-])
-
+const parseObject = between (whitespaceSurrounded (char ('{')))
+                            (whitespaceSurrounded (char ('}')))
+                            (commaSeparated (parseKeyValue))
+                    .map(JObject);
 
 const filepath = path.join(__dirname, '../..', 'package.json');
 readFileAsync(filepath, 'utf8')
-  .then(parse (parseJsonValue))
+  .then(x => parseJsonValue.run(x))
   .then(x => console.log(x.value.toString()))
   .catch(console.log);

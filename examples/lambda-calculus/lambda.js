@@ -6,9 +6,6 @@ import {
 
 import {
   char,
-  mapTo,
-  pipeParsers,
-  parse,
   sequenceOf,
   choice,
   between,
@@ -17,7 +14,7 @@ import {
   recursiveParser
 } from '../../index';
 
-const variable = pipeParsers ([ letters, mapTo (Variable) ]);
+const variable = letters.map(Variable);
 
 const expr = recursiveParser(() => choice ([
   functionDefinition,
@@ -25,21 +22,16 @@ const expr = recursiveParser(() => choice ([
   functionApplication
 ]));
 
-const functionDefinition = pipeParsers ([
-  sequenceOf ([
-    takeRight (char ('λ')) (variable),
-    takeRight (char ('.')) (expr)
-  ]),
-  mapTo (([v, e]) => Definition(v, e))
-]);
+const functionDefinition = sequenceOf ([
+  takeRight (char ('λ')) (variable),
+  takeRight (char ('.')) (expr)
+]).map(([v, e]) => Definition(v, e));
 
-const functionApplication = pipeParsers ([
-  between (char ('('))
-          (char (')'))
-          (sequenceOf ([ expr, takeRight (char (' ')) (expr) ])),
-  mapTo (([a, b]) => Application(a, b))
-]);
+const functionApplication = between (char ('('))
+                                    (char (')'))
+                                    (sequenceOf ([ expr, takeRight (char (' ')) (expr) ]))
+                            .map(([a, b]) => Application(a, b))
 
 console.log(
-  parse (expr) ('((λx.λy.x λx.λy.x) λx.λy.y)').value.toString()
+  expr.run('((λx.λy.x λx.λy.x) λx.λy.y)').value.toString()
 )

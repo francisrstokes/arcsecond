@@ -11,22 +11,20 @@ import {
 
 import {
   char,
-  mapTo,
-  pipeParsers,
-  parse,
   choice,
   between,
-  whitespace,
+  optionalWhitespace,
   many,
   recursiveParser
 } from '../../index';
 
-const asType = type => parser => pipeParsers ([
-  between (whitespace) (whitespace) (parser),
-  mapTo (type)
-]);
+const asType = type => parser =>
+  between (optionalWhitespace)
+          (optionalWhitespace)
+          (parser)
+  .map(type);
 
-const instructions = recursiveParser(() => pipeParsers ([
+const instructions = recursiveParser(() =>
   many (choice ([
     inc,
     dec,
@@ -35,9 +33,8 @@ const instructions = recursiveParser(() => pipeParsers ([
     printByte,
     getByte,
     loop,
-  ])),
-  mapTo (Instructions)
-]));
+  ])).map(Instructions)
+);
 
 const inc = asType (Inc) (char ('+'));
 const dec = asType (Dec) (char ('-'));
@@ -48,5 +45,7 @@ const getByte = asType (GetByte) (char (','));
 const loop = asType (Loop) (between (char ('[')) (char (']')) (instructions))
 
 console.log(
-  parse (instructions) ('++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.').value.toString()
+  instructions
+    .run('++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.')
+    .value.toString()
 )

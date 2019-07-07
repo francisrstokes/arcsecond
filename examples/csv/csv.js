@@ -1,5 +1,4 @@
 import {
-  parse,
   char,
   many,
   sequenceOf,
@@ -10,8 +9,9 @@ import {
   between
 } from '../..';
 
-const joinedMany = parser => many (parser) .map(x => x.join(''));
-const joinedSequence = parsers => sequenceOf (parsers) .map(x => x.join(''));
+const join = separator => array => array.join(separator);
+const joinedMany = parser => many(parser).map(join(''));
+const joinedSequence = parsers => sequenceOf(parsers).map(join(''));
 
 const csvString = between (char ('"')) (char ('"')) (joinedMany (choice ([
   joinedSequence ([ char ('\\'), char ('"') ]),
@@ -32,6 +32,4 @@ const data = `
 4,ember.js,"Ember.js - A JavaScript framework for creating ambitious web applications"
 `;
 
-console.log(
-  parse (parser) (data) .get()
-);
+console.log(parser.run(data).value);

@@ -26,6 +26,7 @@ const {
   possibly,
   skip,
   whitespace,
+  optionalWhitespace,
   takeRight,
   takeLeft,
   recursiveParser,
@@ -35,11 +36,15 @@ const {
   toPromise,
   toValue,
   succeedWith,
-  leftMapTo,
-  either
+  errorMapTo,
+  either,
+  coroutine,
+  getData,
+  setData,
+  mapData,
+  endOfInput,
+  withData
 } = require('../index')
-
-const {Left,Right} = require('data.either');
 
 const f = x => ({ f: x });
 const g = x => ({ g: x });
@@ -63,25 +68,28 @@ const expectEquivalence = (parserA, parserB) => () => {
   });
 };
 
-const failLeft = () => {
-  throw new Error ('Expected a Right')
+const failLeft = state => {
+  console.log(state);
+  throw new Error ('Expected a success')
 };
-const failRight = () => {
-  throw new Error ('Expected a Left')
+const failRight = state => {
+  console.log(state);
+  throw new Error ('Expected an error')
 };
 
 const expectedFailTest = (parser, testingString) => () => {
-  if (parse (parser) (testingString).isRight) {
-    failRight();
+  const result = parser.run(testingString)
+  if (!result.isError) {
+    failRight(result);
   }
 };
 
 const expectedSuccessTest = (parser, expectation, testingString) => () => {
-  const out = parse (parser) (testingString);
-  if (out.isRight) {
-    expect(out.get()).toEqual(expectation);
+  const out = parser.run(testingString);
+  if (out.isError) {
+    failLeft(out);
   } else {
-    failLeft();
+    expect(out.result).toEqual(expectation);
   }
 };
 
@@ -106,31 +114,93 @@ test(
 
 testMany(
   'char', [
-    expectedSuccessTest(char ('a'), 'a', 'abc123'),
-    expectedFailTest (char ('a'), '123'),
-    expectedFailTest (char ('a'), ''),
-    // expectedThrowTest (char ('aaaa'), 'aaaabcdef', 'char must be called with a single character, but got aaaa'),
+    expectedSuccessTest(char('a'), 'a', 'abc123'),
+    expectedFailTest (char('a'), '123'),
+    expectedFailTest (char('a'), ''),
+    () => {
+      expect(() => char('abc')).toThrow('char must be called with a single character, but got abc')
+    }
   ]
 );
+
+testMany(
+  'endOfInput', [
+    expectedSuccessTest(endOfInput, null, ''),
+    expectedFailTest(endOfInput, 'abc'),
+  ]
+)
 
 testMany(
   'either',
   [
     () => {
       const p = either (char ('a'));
-      const res = p.run('a').value;
-      expect(res.isLeft).toBe.false;
+      const res = p.run('a');
+      expect(res.isError).toBe.false;
     },
     () => {
       const p = either (char ('a'));
-      const res = p.run('b').value;
-      expect(res.isLeft).toBe.true;
+      const res = p.run('b');
+      expect(res.isError).toBe.false;
     },
     () => {
       const p = either (fail ('nope!'));
-      const res = p.run('b').value;
-      expect(res.isLeft).toBe.true;
-      expect(res.value[1]).toEqual('nope!');
+      const res = p.run('b');
+      expect(res.isError).toBe.false;
+      expect(res.result.value).toEqual('nope!');
+    }
+  ]
+);
+
+testMany(
+  'coroutine',
+  [
+    () => {
+      const p = coroutine(function* () {
+        const firstPart = yield letters;
+        const secondPart = yield digits;
+        return {
+          result: [firstPart, secondPart]
+        }
+      });
+
+      const res1 = p.run('abc123');
+      expect(res1.result).toEqual({
+        result: ['abc', '123']
+      });
+
+      // A second usage should not be stateful
+      const res2 = p.run('def456');
+      expect(res2.result).toEqual({
+        result: ['def', '456']
+      });
+    },
+    () => {
+      const p = coroutine(function* () {
+        const firstPart = yield letters;
+        const secondPart = yield digits.errorMap(() => 'Wanted digits');
+        return {
+          result: [firstPart, secondPart]
+        }
+      });
+
+      const res = p.run('abc___');
+
+      expect(res.isError).toBe(true);
+      expect(res.error).toEqual('Wanted digits');
+      expect(res.index).toEqual(3);
+    },
+    ,
+    () => {
+      const p = coroutine(function* () {
+        const firstPart = yield letters;
+        const secondPart = yield 42;
+        return {
+          result: [firstPart, secondPart]
+        }
+      });
+
+      expect(() => p.run('abc___')).toThrow('[coroutine] yielded values must be Parsers, got 42.')
     }
   ]
 );
@@ -140,7 +210,9 @@ testMany(
     expectedSuccessTest(str ('abc'), 'abc', 'abc123'),
     expectedFailTest (str ('def'), 'abc123'),
     expectedFailTest (str ('def'), ''),
-    // expectedThrowTest (str (''), 'aaaabcdef', 'str must be called with a string with length > 1, but got '),
+    () => {
+      expect(() => str('')).toThrow('str must be called with a string with length > 1, but got ')
+    }
   ]
 );
 
@@ -364,8 +436,9 @@ testMany(
           digits
         ])
       ])
-      const failResult = parse (parser) ('12345 hello') .value;
-      expect (failResult).toEqual([6, `ParseError 'many1' (position 6): Expecting to match at least one value`]);
+      const failResult = parse (parser) ('12345 hello');
+      expect (failResult.error).toEqual(`ParseError (position 6): Expecting digits`);
+      expect (failResult.index).toEqual(6);
     }
   ]
 );
@@ -450,7 +523,7 @@ testMany(
   ]
 );
 
-test('leftMapTo', () => {
+test('errorMapTo', () => {
   const parser = pipeParsers ([
     choice ([
       sequenceOf ([
@@ -464,12 +537,13 @@ test('leftMapTo', () => {
         digits
       ])
     ]),
-    leftMapTo ((_, index) => `Failed to parse structure @ ${index}`)
+    errorMapTo ((_, index) => `Failed to parse structure @ ${index}`)
   ]);
 
-  const failResult = parse (parser) ('12345 hello') .value;
+  const failResult = parse (parser) ('12345 hello');
 
-  expect (failResult).toEqual([6, 'Failed to parse structure @ 6']);
+  expect (failResult.error).toEqual('Failed to parse structure @ 6');
+  expect (failResult.index).toEqual(6);
 });
 
 testMany(
@@ -513,10 +587,19 @@ testMany(
 );
 
 testMany(
+  'optionalWhitespace', [
+    expectedSuccessTest(optionalWhitespace, '    ', '    '),
+    expectedSuccessTest(optionalWhitespace, '', ''),
+    expectedSuccessTest(optionalWhitespace, '', 'a'),
+    expectedSuccessTest(optionalWhitespace, '         ', '         a'),
+  ]
+);
+
+testMany(
   'whitespace', [
     expectedSuccessTest(whitespace, '    ', '    '),
-    expectedSuccessTest(whitespace, '', ''),
-    expectedSuccessTest(whitespace, '', 'a'),
+    expectedFailTest(whitespace, '', ''),
+    expectedFailTest(whitespace, '', 'a'),
     expectedSuccessTest(whitespace, '         ', '         a'),
   ]
 );
@@ -639,28 +722,46 @@ test('tapParser', () => {
 
   expectedSuccessTest(parser, 'a', 'abc')();
   expect(wasCalled).toBe(true);
-  expect(value).toEqual([1, 'abc', 'a']);
+  expect(value).toEqual({
+    index:1,
+    data: null,
+    target: 'abc',
+    isError: false,
+    error: null,
+    result: 'a'
+  });
 
   wasCalled = false;
   value = null;
 
   expectedFailTest(parser, 'xyz')();
   expect(wasCalled).toBe(true);
-  expect(value).toEqual([0, `ParseError (position 0): Expecting character 'a', got 'x'`]);
+  expect(value).toEqual({
+    index:0,
+    data: null,
+    target: 'xyz',
+    result: null,
+    isError: true,
+    error: `ParseError (position 0): Expecting character 'a', got 'x'`
+  });
 });
 
 test('toPromise', async () => {
-  const lv = Left('oh no');
-  const rv = Right('oh yes');
+  const failed = toPromise(fail('crash').run('nope'));
+  const succeeded = toPromise(Parser.of('all good').run('nope'));
 
-  await toPromise(lv)
-    .then(() => {
+  await failed
+    .then(x => {
+      console.log(x);
       throw new Error('Expected to reject')
     })
-    .catch(x => expect(x).toBe('oh no'));
+    .catch(failState => {
+      expect(failState.error).toEqual('crash');
+      expect(failState.index).toEqual(0);
+    });
 
-  await toPromise(rv)
-    .then(x => expect(x).toBe('oh yes'))
+  await succeeded
+    .then(x => expect(x).toBe('all good'))
     .catch(() => {
       throw new Error('Expected to resolve')
     });
@@ -683,6 +784,320 @@ test('toValue', () => {
     expect(x).toBe('oh yes');
   }).not.toThrow()
 });
+
+test('run', () => {
+  const p = Parser.of(42);
+  const out = p.run('Hello');
+  expect(out.result).toBe(42);
+});
+
+testMany('fork', [
+  () => {
+    const p = Parser.of(42);
+    let errorTriggered = false;
+    let successTriggered = false;
+
+    const out = p.fork(
+      'Hello',
+      x => {
+        errorTriggered = true;
+        return x;
+      },
+      (x, parserState) => {
+        successTriggered = true;
+        expect(parserState.data).toEqual(null);
+        return x;
+      }
+    );
+
+    expect(successTriggered).toBe(true);
+    expect(errorTriggered).toBe(false);
+    expect(out).toBe(42);
+  },
+  () => {
+    const p = Parser.of(42);
+    let errorTriggered = false;
+    let successTriggered = false;
+
+    const out = p.mapData(() => 'my data').fork(
+      'Hello',
+      x => {
+        errorTriggered = true;
+        return x;
+      },
+      (x, parserState) => {
+        successTriggered = true;
+        expect(parserState.data).toEqual('my data');
+        return x;
+      }
+    );
+
+    expect(successTriggered).toBe(true);
+    expect(errorTriggered).toBe(false);
+    expect(out).toBe(42);
+  },
+  () => {
+    const p = fail(42);
+    let errorTriggered = false;
+    let successTriggered = false;
+
+    const out = p.fork(
+      'Hello',
+      (x, parserState) => {
+        errorTriggered = true;
+        expect(parserState.data).toEqual(null);
+        return x;
+      },
+      x => {
+        successTriggered = true;
+        return x;
+      }
+    );
+
+    expect(successTriggered).toBe(false);
+    expect(errorTriggered).toBe(true);
+    expect(out).toBe(42);
+  },
+]);
+
+testMany('withData', [
+  () => {
+    const parser = withData(digits);
+
+    let wasError = false;
+
+    parser('my data').fork(
+      '42 is the answer',
+      e => {
+        wasError = true;
+      },
+      (value, parserState) => {
+        expect(value).toEqual('42');
+        expect(parserState.data).toEqual('my data');
+      }
+    );
+
+    expect(wasError).toBe(false);
+  }
+])
+
+test('getData', () => {
+  const p = withData(coroutine(function* () {
+    let stateData = yield getData;
+    return stateData;
+  }));
+
+  const out = p([1, 2, 3]).run('Hello');
+  expect(out.result).toEqual([1, 2, 3]);
+});
+
+testMany('setData', [
+  () => {
+    const parser = coroutine(function* () {
+      yield setData('New Data');
+      return 42;
+    });
+
+    let wasError = false;
+
+    parser.fork(
+      'Hello',
+      e => {
+        wasError = true;
+      },
+      (value, parserState) => {
+        expect(value).toEqual(42);
+        expect(parserState.data).toEqual('New Data');
+      }
+    );
+
+    expect(wasError).toBe(false);
+  },
+  () => {
+    const parser = withData(coroutine(function* () {
+      const data = yield getData;
+      yield setData(data.map(x => x * 2));
+      return 42;
+    }));
+
+    let wasError = false;
+
+    parser([1, 2, 3]).fork(
+      'Hello',
+      e => {
+        wasError = true;
+      },
+      (value, parserState) => {
+        expect(value).toEqual(42);
+        expect(parserState.data).toEqual([2, 4, 6]);
+      }
+    );
+
+    expect(wasError).toBe(false);
+  },
+  () => {
+    const parser = withData(coroutine(function* () {
+      yield setData('persists!');
+      yield fail('nope');
+      return 42;
+    }));
+
+    let wasSuccess = false;
+
+    parser([1, 2, 3]).fork(
+      'Hello',
+      (e, parserState) => {
+        expect(e).toEqual('nope');
+        expect(parserState.data).toEqual('persists!')
+      },
+      () => {
+        wasSuccess = true;
+      }
+    );
+
+    expect(wasSuccess).toBe(false);
+  }
+]);
+
+testMany('mapData', [
+  () => {
+    const parser = withData(coroutine(function* () {
+      yield mapData(d => d.map(x => x * 2));
+      return 42;
+    }));
+
+    let wasError = false;
+
+    parser([1, 2, 3]).fork(
+      'Hello',
+      e => {
+        wasError = true;
+      },
+      (value, parserState) => {
+        expect(value).toEqual(42);
+        expect(parserState.data).toEqual([2, 4, 6]);
+      }
+    );
+
+    expect(wasError).toBe(false);
+  },
+  () => {
+    const parser = withData(Parser.of(42).mapData(d => d.map(x => x * 2)));
+
+    let wasError = false;
+
+    parser([1, 2, 3]).fork(
+      'Hello',
+      e => {
+        wasError = true;
+      },
+      (value, parserState) => {
+        expect(value).toEqual(42);
+        expect(parserState.data).toEqual([2, 4, 6]);
+      }
+    );
+
+    expect(wasError).toBe(false);
+  },
+]);
+
+testMany('.errorChain', [
+  () => {
+    const p = val => fail(val).errorChain(({error}) => {
+      if (error === 42) {
+        return letters;
+      } else {
+        return fail('nope');
+      }
+    });
+
+    const res = p(42).run('abc');
+    expect(res.isError).toBe(false);
+    expect(res.result).toEqual('abc');
+
+    const res2 = p(41).run('abc');
+    expect(res2.isError).toBe(true);
+    expect(res2.error).toEqual('nope');
+  },
+  () => {
+    const p = letters.chain(() => fail(42)).errorChain(({index}) => {
+      if (index === 3) {
+        return digits;
+      } else {
+        return fail('nope');
+      }
+    });
+
+    const res = p.run('abc1234');
+    expect(res.isError).toBe(false);
+    expect(res.result).toEqual('1234');
+
+    const res2 = p.run('abcd1234');
+    expect(res2.isError).toBe(true);
+    expect(res2.error).toEqual('nope');
+  },
+  () => {
+    const p = withData(fail(42).errorChain(({data}) => {
+      if (data === 'I was stored!') {
+        return letters;
+      } else {
+        return fail('nope');
+      }
+    }));
+
+    const res = p('I was stored!').run('abc');
+    expect(res.isError).toBe(false);
+    expect(res.result).toEqual('abc');
+
+    const res2 = p('something different').run('abc');
+    expect(res2.isError).toBe(true);
+    expect(res2.error).toEqual('nope');
+  },
+  ,
+  () => {
+    const p = letters.errorChain(() => Parser.of('I changed!'));
+
+    const res = p.run('abc');
+    expect(res.isError).toBe(false);
+    expect(res.result).toEqual('abc');
+  }
+])
+
+
+test('mapFromData', () => {
+  const p = withData(Parser.of(42).mapFromData(({data}) => {
+    if (data === 'yes') {
+      return 0xDEADBEEF;
+    } else {
+      return 0xF00DBABE;
+    }
+  }));
+
+  const out1 = p('yes').run('whatever').result;
+  expect(out1).toEqual(0xDEADBEEF);
+
+  const out2 = p('nope').run('whatever').result;
+  expect(out2).toEqual(0xF00DBABE);
+})
+
+test('chainFromData', () => {
+  const p = withData(Parser.of(42).chainFromData(({data}) => {
+    if (data === 'use digits') {
+      return digits;
+    } else {
+      return letters;
+    }
+  }));
+
+
+  const out1 = p('use digits').run('012345');
+  expect(out1.isError).toBe(false);
+  expect(out1.result).toEqual('012345');
+
+  const out2 = p('use letters').run('012345');
+  expect(out2.isError).toBe(true);
+  expect(out2.error).toEqual(`ParseError (position 0): Expecting letters`);
+})
 
 test('map (equivalence to mapTo)', () => {
   const fn = x => ({ value: x })
@@ -708,9 +1123,9 @@ testMany('map (laws)', [
     ),
 ]);
 
-testMany('leftMap (laws)', [
+testMany('errorMap (laws)', [
   expectEquivalence(
-    fail('nope').leftMap(x => x),
+    fail('nope').errorMap(x => x),
     fail('nope')
   ),
   expectEquivalence(
@@ -722,8 +1137,8 @@ testMany('leftMap (laws)', [
 test('map (equivalence to mapTo)', () => {
   const fn = x => ({ value: x })
 
-  const failMap = fail('nope').leftMap(fn);
-  const failMapTo = pipeParsers ([ fail('nope'), leftMapTo (fn) ]);
+  const failMap = fail('nope').errorMap(fn);
+  const failMapTo = pipeParsers ([ fail('nope'), errorMapTo (fn) ]);
 
   expectEquivalence(failMap, failMapTo)();
 });
@@ -764,6 +1179,13 @@ testMany('chain (laws)', [
   expectEquivalence(
     letters.chain(() => digits).chain(() => char('a')),
     letters.chain(x => (() => digits)(x).chain(() => char('a')))
+  )
+]);
+
+testMany('errorChain (laws)', [
+  expectEquivalence(
+    fail('no').errorChain(() => digits).chain(() => char('a')),
+    fail('no').errorChain(x => (() => digits)(x).chain(() => char('a')))
   )
 ]);
 
