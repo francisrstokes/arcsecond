@@ -152,4 +152,4 @@ arcsecond provides special "parsers" that allow reading/writing to internal *sta
 
 That brings us to the end of the arcsecond crash course! If there is a topic that you would like to see covered here, don't hesitate to open an issue. If you notice any errors, you're also welcome to open a pull request!
 
-[Back to the API docs](../readme.md)
+[Back to the API docs](../Readme.md)
