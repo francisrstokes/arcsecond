@@ -101,9 +101,9 @@ const fullParser = sequenceOf([
   letters.errorMap(tap(x => console.log(5))),
 ]);
 
-fullParser.run('hello _ world').value.error;
+fullParser.run('hello _ world').error;
 // -> [console.log] 3
-// -> fullParser.run('hello _ world').value.error;
+// -> fullParser.run('hello _ world').error;
 ```
 
 Again, we've zoomed in on the error. If you're a power user of JavaScript, or you come from another programming language, you might want to reach for the debugger. This is tricky with the kind of parsers we've seen above - you can use `tapParser` or `tap` with a breakpoint inside, but it's a bit cumbersome. This is another area that `coroutine` shines in!
@@ -137,7 +137,7 @@ const fullParser = coroutine(function* () {
   return [first, second, third];
 });
 
-fullParser.run('hello _ world').value.error;
+fullParser.run('hello _ world').error;
 // -> ParseError (position 6): Expecting letters
 ```
 
