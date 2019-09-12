@@ -116,7 +116,7 @@ const customSepByWithCoroutine = separatorParser => valueParser => coroutine(fun
     const value = yield either(valueParser);
 
     // We can't parse more values, break from the loop
-    if (value.isLeft) break;
+    if (value.isError) break;
 
     // Push the captured value into the results array
     results.push(value);
@@ -124,7 +124,7 @@ const customSepByWithCoroutine = separatorParser => valueParser => coroutine(fun
     const sep = yield either(separatorParser);
 
     // There are no more separators, break from the loop
-    if (sep.isLeft) break;
+    if (sep.isError) break;
   }
 
   // sepBy allows for zero results to be matched, so we will here too.
