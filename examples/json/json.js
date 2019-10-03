@@ -101,5 +101,5 @@ const parseObject = between (whitespaceSurrounded (char ('{')))
 const filepath = path.join(__dirname, '../..', 'package.json');
 readFileAsync(filepath, 'utf8')
   .then(x => parseJsonValue.run(x))
-  .then(x => console.log(x.value.toString()))
+  .then(x => console.log(x.result.toString()))
   .catch(console.log);
