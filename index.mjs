@@ -3,6 +3,13 @@
 // data StateData a s = { result: a, data: s }
 // data ParsingResult e a = Ok a | Error e
 
+// Caching compiled regexs for better performance
+const reDigit = /[0-9]/;
+const reDigits = /^[0-9]+/;
+const reLetter = /[a-zA-Z]/;
+const reLetters = /^[a-zA-Z]+/;
+const reWhitespaces = /^\s+/;
+
 //    createParserState :: x -> s -> ParserState e a s
 const createParserState = (target, data = null) => ({
   isError: false,
@@ -407,7 +414,7 @@ export const digit = new Parser(function digit$state(state) {
   const {target, index} = state;
 
   if (target.length > index) {
-    return (target.length && target[index] && /[0-9]/.test(target[index]))
+    return (target.length && target[index] && reDigit.test(target[index]))
       ? updateParserState(state, target[index], index + 1)
       : updateError(state, `ParseError (position ${index}): Expecting digit, got '${target[index]}'`)
   }
@@ -415,8 +422,7 @@ export const digit = new Parser(function digit$state(state) {
 });
 
 //           digits :: Parser e String s
-export const digits = many1(digit)
-  .map(x => x.join(''))
+export const digits = regex(reDigits)
   .errorMap((_, index) => `ParseError (position ${index}): Expecting digits`);
 
 //           letter :: Parser e Char s
@@ -426,7 +432,7 @@ export const letter = new Parser(function letter$state(state) {
   const {index, target} = state;
 
   if (target.length > index) {
-    return (target.length && target[index] && /[a-zA-Z]/.test(target[index]))
+    return (target.length && target[index] && reLetter.test(target[index]))
       ? updateParserState(state, target[index], index + 1)
       : updateError(state, `ParseError (position ${index}): Expecting letter, got '${target[index]}'`);
   }
@@ -435,8 +441,7 @@ export const letter = new Parser(function letter$state(state) {
 });
 
 //           letters :: Parser e String s
-export const letters = many1(letter)
-  .map(x => x.join(''))
+export const letters = regex(reLetters)
   .errorMap((_, index) => `ParseError (position ${index}): Expecting letters`);
 
 //           anyOfString :: String -> Parser e Char s
@@ -482,10 +487,11 @@ export const sequenceOf = function sequenceOf(parsers) {
   return new Parser(function sequenceOf$state(state) {
     if (state.isError) return state;
 
-    const results = new Array(parsers.length);
+    const length = parsers.length;
+    const results = new Array(length);
     let nextState = state;
 
-    for (let i = 0; i < parsers.length; i++) {
+    for (let i = 0; i < length; i++) {
       const out = parsers[i].p(nextState);
 
       if (out.isError) {
@@ -680,10 +686,12 @@ export const endOfInput = new Parser(function endOfInput$state(state) {
 });
 
 //           whitespace :: Parser e String s
-export const whitespace =  many1 (anyOfString (' \n\t\r')) .map (x => x.join(''));
+export const whitespace = regex(reWhitespaces)
+  // Keeping this error even though the implementation no longer uses many1. Will change it to something more appropriate in the next major release.
+  .errorMap((_, index) => `ParseError 'many1' (position ${index}): Expecting to match at least one value`);
 
 //           optionalWhitespace :: Parser e String s
-export const optionalWhitespace = many (anyOfString (' \n\t\r')) .map (x => x.join(''));
+export const optionalWhitespace = possibly(whitespace).map(x => x||'');
 
 //           recursiveParser :: (() => Parser e a s) -> Parser e a s
 export const recursiveParser = function recursiveParser(parserThunk) {
