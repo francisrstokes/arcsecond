@@ -512,34 +512,28 @@ export const sepBy = function sepBy(sepParser) {
     return new Parser(function sepBy$valParser$state(state) {
       if (state.isError) return state;
 
-      let nextState = state;
-      let error = null;
       const results = [];
 
-      while (true) {
-        const valState = valParser.p(nextState);
-        const sepState = sepParser.p(valState);
-
-        if (valState.isError) {
-          error = valState;
-          break;
-        } else {
-          results.push(valState.result);
-        }
-
-        if (sepState.isError) {
-          nextState = valState;
-          break;
-        }
-
-        nextState = sepState;
+      const headState = valParser.p(state);
+      if (headState.isError) {
+        return updateResult(state, results)
       }
 
-      if (error) {
-        if (results.length === 0) {
-          return updateResult(state, results)
+      results.push(headState.result)
+      let nextState = headState;
+      while (true) {
+        const sepState = sepParser.p(nextState);
+        if (sepState.isError) {
+          break;
         }
-        return error;
+
+        const valState = valParser.p(sepState);
+        if (valState.isError) {
+          break;
+        }
+
+        results.push(valState.result);
+        nextState = valState;
       }
 
       return updateResult(nextState, results);

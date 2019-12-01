@@ -373,7 +373,8 @@ testMany(
     expectedSuccessTest(sepBy (char (',')) (letter), ['a', 'b', 'c'], 'a,b,c'),
     expectedSuccessTest(sepBy (char (',')) (letter), [], ''),
     expectedSuccessTest(sepBy (char (',')) (letter), [], '1,2,3'),
-    expectedFailTest(sepBy (char (',')) (letter), 'a,b,'),
+    expectedSuccessTest(sepBy (char (',')) (letter), ['a','b'], 'a,b,'),
+    expectedFailTest(takeLeft(sepBy(char(','))(letter))(endOfInput), 'a,b,'),
   ]
 );
 
@@ -382,7 +383,8 @@ testMany(
     expectedSuccessTest(sepBy1 (char (',')) (letter), ['a', 'b', 'c'], 'a,b,c'),
     expectedFailTest(sepBy1 (char (',')) (letter), [], ''),
     expectedFailTest(sepBy1 (char (',')) (letter), [], '1,2,3'),
-    expectedFailTest(sepBy1 (char (',')) (letter), 'a,b,'),
+    expectedSuccessTest(sepBy1 (char (',')) (letter), ['a','b'], 'a,b,'),
+    expectedFailTest(takeLeft(sepBy1(char(','))(letter))(endOfInput), 'a,b,'),
   ]
 );
 
