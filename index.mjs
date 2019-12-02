@@ -273,7 +273,7 @@ export const coroutine = function coroutine(g) {
   return Parser.of().chain(_ => {
     const generator = g();
 
-    const step = nextValue => {
+    const step = (nextValue) => {
       const result = generator.next(nextValue);
       const value = result.value;
       const done = result.done;
@@ -282,7 +282,9 @@ export const coroutine = function coroutine(g) {
         throw new Error(`[coroutine] yielded values must be Parsers, got ${result.value}.`);
       }
 
-      return done ? Parser.of(value) : value.chain(step);
+      return done
+        ? Parser.of(value)
+        : value.chain(step);
     };
 
     return step();
@@ -646,7 +648,7 @@ export const lookAhead = function lookAhead(parser) {
     if (state.isError) return state;
     const nextState = parser.p(state);
     return (nextState.isError)
-      ? nextState
+      ? updateError(state, nextState.error)
       : updateResult(state, nextState.result);
   });
 };
