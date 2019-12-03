@@ -944,7 +944,7 @@ newParser.run('hello world')
 
 `sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s`
 
-`sepBy` takes two parsers - a *separator* parser and a *value* parser - and returns a new parser that matches **zero or more** values from the *value* parser that are separated by values of the *separator* parser. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
+`sepBy` takes two parsers - a *separator* parser and a *value* parser - and returns a new parser that matches **zero or more** values from the *value* parser that are separated by values of the *separator* parser. Because it will match zero or more values, this parser will *fail* if a *value* is followed by a *separator* but NOT another *value*.  If there's no *value*, the result will be an empty array, not failure.
 
 **Example**
 ```JavaScript
