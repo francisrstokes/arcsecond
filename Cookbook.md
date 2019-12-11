@@ -12,15 +12,15 @@ import { fromPairs } from 'ramda';
 const
     validCharacters = /^[^;,\s]*/,
     percentEncoded = /(%[0-9A-Za-z]{2})+/g,
-    percentDecode = ( value ) => value.replace( percentEncoded, decodeURIComponent ),
-    equalsSign = char( '=' ),
-    cookie = sequenceOf( [
-        everythingUntil( equalsSign ).map( percentDecode ),
-        takeRight( equalsSign )( regex( validCharacters ) ).map( percentDecode )
-    ] ),
-    cookies = sepBy( str( '; ' ) )( cookie ).map( fromPairs );
+    percentDecode = value => value.replace(percentEncoded, decodeURIComponent),
+    equalsSign = char('='),
+    cookie = sequenceOf([
+        everythingUntil(equalsSign).map(percentDecode),
+        takeRight(equalsSign)(regex(validCharacters)).map(percentDecode)
+    ]),
+    cookies = sepBy(str('; '))(cookie).map(fromPairs);
 
-cookies.run( 'a=123; b=456; c=%20' ).result //=> { "a": "123", "b": "456", "c": " " }
+cookies.run('a=123; b=456; c=%20').result //=> { "a": "123", "b": "456", "c": " " }
 ```
 
 
