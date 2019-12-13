@@ -9,16 +9,15 @@ A lenient parser for `document.cookie`. It uses [`fromPairs`](https://ramdajs.co
 import { char, everythingUntil, regex, sepBy, sequenceOf, str, takeRight } from 'arcsecond';
 import { fromPairs } from 'ramda';
 
-const
-    validCharacters = /^[^;,\s]*/,
-    percentEncoded = /(%[0-9A-Za-z]{2})+/g,
-    percentDecode = value => value.replace(percentEncoded, decodeURIComponent),
-    equalsSign = char('='),
-    cookie = sequenceOf([
-        everythingUntil(equalsSign).map(percentDecode),
-        takeRight(equalsSign)(regex(validCharacters)).map(percentDecode)
-    ]),
-    cookies = sepBy(str('; '))(cookie).map(fromPairs);
+const validCharacters = /^[^;,\s]*/;
+const percentEncoded = /(%[0-9A-Za-z]{2})+/g;
+const percentDecode = value => value.replace(percentEncoded, decodeURIComponent);
+const equalsSign = char('=');
+const cookie = sequenceOf([
+    everythingUntil(equalsSign).map(percentDecode),
+    takeRight(equalsSign)(regex(validCharacters)).map(percentDecode)
+]);
+const cookies = sepBy(str('; '))(cookie).map(fromPairs);
 
 cookies.run('a=123; b=456; c=%20').result //=> { "a": "123", "b": "456", "c": " " }
 ```
