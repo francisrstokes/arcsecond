@@ -7,7 +7,7 @@ Arcsecond is a zero-dependency, Fantasy Land compliant JavaScript [Parser Combin
 - [Arcsecond](#arcsecond)
   - [Release Notes](#release-notes)
   - [Installation](#installation)
-  - [Tutorial](#tutorial)
+  - [Tutorial](#tutorials)
   - [Usage](#usage)
   - [Running the examples](#running-the-examples)
   - [API](#api)
@@ -479,7 +479,7 @@ parser.run('Parser is not looking at the text!');
 
 `withData :: Parser e a x -> s -> Parser e a s`
 
-`withData` a *provided parser*, and returns a function waiting for some *state data* to set, and then returns a new parser. That parser, when run, ensures that the *state data* is set as the *internal state data* before the *provided parser* runs.
+`withData` takes a *provided parser*, and returns a function waiting for some *state data* to be set, and then returns a new parser. That parser, when run, ensures that the *state data* is set as the *internal state data* before the *provided parser* runs.
 
 **Example**
 ```JavaScript
@@ -1078,7 +1078,7 @@ newParser.run('12345')
 
 `between` takes 3 parsers, a *left* parser, a *right* parser, and a *value* parser, returning a new parser that matches a value matched by the *value* parser, between values matched by the *left* parser and the *right* parser.
 
-This parser can easily be partially applied with `char ('(')` and `char (')')` to create a `betweenBrackets` parser, for example.
+This parser can easily be partially applied with `char ('(')` and `char (')')` to create a `betweenRoundBrackets` parser, for example.
 
 **Example**
 ```JavaScript
@@ -1092,9 +1092,9 @@ newParser.run('<hello>')
 //      data: null
 //    }
 
-const betweenBrackets = between (char ('(')) (char (')'));
+const betweenRoundBrackets = between (char ('(')) (char (')'));
 
-betweenBrackets (many (letters)).run('(hello world)')
+betweenRoundBrackets (many (letters)).run('(hello world)')
 // -> {
 //      isError: true,
 //      error: "ParseError (position 6): Expecting character ')', got ' '",
@@ -1102,7 +1102,6 @@ betweenBrackets (many (letters)).run('(hello world)')
 //      data: null
 //    }
 ```
-
 
 #### everythingUntil
 
@@ -1576,14 +1575,11 @@ const result = str ('hello').run('hello worbackgroiund<hAld');
 
 try {
   const value = toValue(result);
+  console.log(value);
+  // -> 'hello'
 } catch (parseError) {
   console.error(parseError.message)
 }
-
-resultAsPromise
-  .then(console.log)
-  .catch(console.error);
-// -> 'hello'
 ```
 
 #### parse
@@ -1605,7 +1601,7 @@ parse (str ('hello')) ('hello')
 
 ## A note on recursive grammars
 
-If you're pasrsing a programming language, a configuration, or anything of sufficient complexity, it's likely that you'll need to define some parsers in terms of each other. You might want to do something like:
+If you're parsing a programming language, a configuration, or anything of sufficient complexity, it's likely that you'll need to define some parsers in terms of each other. You might want to do something like:
 
 ```JavaScript
 const value = choice ([
