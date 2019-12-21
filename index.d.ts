@@ -3,32 +3,32 @@
 /* eslint-disable */
 declare namespace Arcsecond {
 
-    export type ParserState<TResult,TData=void> = {
+    type ParserState<TResult,TData=void> = {
         isError: boolean;
-        error?: string;
+        error?: string | null;
         target?: string;
-        data: TData;
+        data: TData | null;
         index: number;
-        result?: TResult;
+        result?: TResult | null;
     };
 
-    export type SuccessState<TResult,TData> = ParserState<TResult,TData> & { isError: false };
-    export type ErrorState<TResult,TData> = ParserState<TResult,TData> & { isError: true };
+    type SuccessState<TResult,TData> = ParserState<TResult,TData> & { isError: false };
+    type ErrorState<TResult,TData> = ParserState<TResult,TData> & { isError: true };
 
-    export type StateData<TResult=string,TData=void> = {
+    type StateData<TResult=string,TData=void> = {
         result: TResult;
         data: TData;
     };
 
-    export type ChainCallback<TInput,TOutput> = (result: TInput) => Chain<TOutput>;
-    export type ChainFromDataCallback<TInput,TOutput,TData> = (state: StateData<TInput,TData>) => Parser<TOutput,TData>;
-    export type ErrorChainCallback<TInput,TOutput,TData> = (state: ErrorState<TInput,TData>) => Parser<TOutput,TData>;
-    export type ErrorMapCallback = (error: string, index: number, data) => string;
-    export type ForkErrorCallback<TResult,TErrorResult,TData> = (error: string, newState: ErrorState<TResult,TData>) => ParserState<TErrorResult,TData>;
-    export type ForkSuccessCallback<TResult,TSuccessResult,TData> = (result: TResult, newState: SuccessState<TResult,TData>) => ParserState<TSuccessResult,TData>;
-    export type MapCallback<TInput,TOutput> = (result: TInput) => TOutput;
-    export type MapDataCallback<TData> = (data: TData) => TData;
-    export type MapFromDataCallback<TInput, TData, TOutput> = (state: StateData<TInput,TData>) => Parser<TOutput,TData>;
+    type ChainCallback<TInput,TOutput> = (result: TInput) => Chain<TOutput>;
+    type ChainFromDataCallback<TInput,TOutput,TData> = (state: StateData<TInput,TData>) => Parser<TOutput,TData>;
+    type ErrorChainCallback<TInput,TOutput,TData> = (state: ErrorState<TInput,TData>) => Parser<TOutput,TData>;
+    type ErrorMapCallback = (error: string, index: number, data) => string;
+    type ForkErrorCallback<TResult,TErrorResult,TData> = (error: string, newState: ErrorState<TResult,TData>) => ParserState<TErrorResult,TData>;
+    type ForkSuccessCallback<TResult,TSuccessResult,TData> = (result: TResult, newState: SuccessState<TResult,TData>) => ParserState<TSuccessResult,TData>;
+    type MapCallback<TInput,TOutput> = (result: TInput) => TOutput;
+    type MapDataCallback<TData> = (data: TData) => TData;
+    type MapFromDataCallback<TInput, TData, TOutput> = (state: StateData<TInput,TData>) => Parser<TOutput,TData>;
 
     interface Applicative<T> {
         ['fantasy-land/of'](x: T): Applicative<T>;
@@ -46,9 +46,7 @@ declare namespace Arcsecond {
         ['fantasy-land/map']<TOutput>(fn: MapCallback<TInput,TOutput>): Functor<TOutput>;
     }
 
-    export interface Parser<TResult, TData = void> extends Apply<TResult>, Chain<TResult>, Functor<TResult> {
-        p: <TOutput>(state: ParserState<TResult,TData>) => ParserState<TOutput,TData>;
-
+    interface Parser<TResult, TData = void> extends Apply<TResult>, Chain<TResult>, Functor<TResult> {
         ap(parserOfFunction: Parser<TResult,TData>): Parser<TResult,TData>;
         chain<TOutput>(fn: ChainCallback<TResult,TOutput>): Parser<TOutput,TData>;
         chainFromData<TOutput>(fn: ChainFromDataCallback<TResult,TOutput,TData>): Parser<TOutput,TData>;
@@ -61,9 +59,9 @@ declare namespace Arcsecond {
         run(targetString: string): ParserState<TResult,TData>;
     }
 
-    export interface ParserConstructor<TResult, TData = void> extends Applicative<TResult> {
+    interface ParserConstructor<TResult, TData = void> extends Applicative<TResult> {
         of: Applicative<TResult>['fantasy-land/of'];
-        new(p: (state: ParserState<TResult,TData>) => ParserState<TResult,TData>): Parser<TResult,TData>;
+        new(p: <TInput>(state: ParserState<TInput,TData>) => ParserState<TResult,TData>): Parser<TResult,TData>;
         readonly prototype: Parser<TResult,TData>;
     }
 
@@ -116,9 +114,11 @@ declare namespace Arcsecond {
         withData(parser: StringParser): StringParser;
     }
 
-    type ArcsecondStatic = ArcsecondParsers;
+    type ArcsecondAPI = {
+        Parser: StringParserConstructor
+    }
 
-    const Parser: StringParserConstructor;
+    type ArcsecondStatic = ArcsecondParsers & ArcsecondAPI;
 }
 
 declare const arcsecond: Arcsecond.ArcsecondStatic;
