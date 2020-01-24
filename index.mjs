@@ -713,7 +713,7 @@ export const takeRight = function takeRight(leftParser) {
 
 //           takeLeft :: Parser e a s -> Parser f b t -> Parser e a s
 export const takeLeft = function takeLeft(leftParser) {
-  return function (rightParser) {
+  return function takeLeft$rightParser(rightParser) {
     return leftParser.chain(x => rightParser.map(() => x));
   }
 }
