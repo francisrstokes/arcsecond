@@ -550,7 +550,7 @@ If dealing with any complex level of state - such as an object where individual 
 **Example**
 ```JavaScript
 
-const selectData = selectorFn => getData.map(selectorFn);
+const selectState = selectorFn => getData.map(selectorFn);
 
 const parser = withData(coroutine(function* () {
   // Here we can take or transform the state
