@@ -61,7 +61,7 @@ Parser.prototype.run = function Parser$run(targetString) {
 };
 
 //               fork :: Parser e a s ~> x -> (e -> ParserState e a s -> f) -> (a -> ParserState e a s -> b)
-Parser.prototype.fork = function Parser$run(targetString, errorFn, successFn) {
+Parser.prototype.fork = function Parser$fork(targetString, errorFn, successFn) {
   const state = createParserState(targetString);
   const newState = this.p(state);
 
@@ -120,9 +120,9 @@ Parser.prototype.errorMap = function Parser$errorMap(fn) {
 };
 
 //               errorChain :: Parser e a s ~> ((e, Integer, s) -> Parser f a s) -> Parser f a s
-Parser.prototype.errorChain = function Parser$errorMap(fn) {
+Parser.prototype.errorChain = function Parser$errorChain(fn) {
   const p = this.p;
-  return new Parser(function Parser$errorMap$state(state) {
+  return new Parser(function Parser$errorChain$state(state) {
     const nextState = p(state);
     if (nextState.isError) {
       const {error, index, data} = nextState;
@@ -154,7 +154,7 @@ Parser.prototype.chainFromData = function Parser$chainFromData(fn) {
 };
 
 //               mapData :: Parser e a s ~> (s -> t) -> Parser e a t
-Parser.prototype.mapData = function mapData(fn) {
+Parser.prototype.mapData = function Parser$mapData(fn) {
   const p = this.p;
   return new Parser(function mapData$state(state) {
     const newState = p(state);
@@ -163,7 +163,7 @@ Parser.prototype.mapData = function mapData(fn) {
 };
 
 //                   of :: a -> Parser e a s
-Parser['fantasy-land/of'] = function (x) {
+Parser['fantasy-land/of'] = function Parser$of(x) {
   return new Parser(state => updateResult(state, x));
 };
 
@@ -196,14 +196,14 @@ export const mapData = function mapData(fn) {
 
 //           withData :: Parser e a x -> s -> Parser e a s
 export const withData = function withData(parser) {
-  return function withData$parser(stateData) {
+  return function withData$stateData(stateData) {
     return setData(stateData).chain(() => parser);
   };
 };
 
 //           pipeParsers :: [Parser * * *] -> Parser * * *
-export const pipeParsers = function pipeParsers (parsers) {
-  return new Parser(function pipeParsers$state (state) {
+export const pipeParsers = function pipeParsers(parsers) {
+  return new Parser(function pipeParsers$state(state) {
     let nextState = state;
     for (const parser of parsers) {
       nextState = parser.p(nextState);
@@ -215,7 +215,7 @@ export const pipeParsers = function pipeParsers (parsers) {
 //           composeParsers :: [Parser * * *] -> Parser * * *
 export const composeParsers = function composeParsers(parsers) {
   return new Parser(function composeParsers$state(state) {
-    return pipeParsers ([...parsers].reverse()).p(state);
+    return pipeParsers([...parsers].reverse()).p(state);
   });
 };
 
@@ -339,10 +339,12 @@ export const mapTo = function mapTo(fn) {
 };
 
 //           errorMapTo :: (ParserState e a s -> f) -> Parser f a s
-export const errorMapTo = fn => new Parser(state => {
-  if (!state.isError) return state;
-  return updateError(state, fn(state.error, state.index, state.data));
-});
+export const errorMapTo = function errorMapTo(fn) {
+  return new Parser(function errorMapTo$state(state) {
+    if (!state.isError) return state;
+    return updateError(state, fn(state.error, state.index, state.data));
+  });
+}
 
 //           char :: Char -> Parser e Char s
 export const char = function char(c) {
@@ -350,7 +352,7 @@ export const char = function char(c) {
     throw new TypeError (`char must be called with a single character, but got ${c}`);
   }
 
-  return new Parser(function char$state (state) {
+  return new Parser(function char$state(state) {
     if (state.isError) return state;
 
     const {target, index} = state;
@@ -369,7 +371,7 @@ export const str = function str(s) {
     throw new TypeError (`str must be called with a string with length > 1, but got ${s}`);
   }
 
-  return new Parser(function str$state (state) {
+  return new Parser(function str$state(state) {
     const {target, index} = state;
     const rest = target.slice(index);
 
@@ -588,7 +590,7 @@ export const choice = function choice(parsers) {
 //           between :: Parser e a s -> Parser e b s -> Parser e c s -> Parser e b s
 export const between = function between(leftParser) {
   return function between$rightParser(rightParser) {
-    return function between$rightParser(parser) {
+    return function between$parser(parser) {
       return sequenceOf ([
         leftParser,
         parser,
@@ -703,24 +705,32 @@ export const recursiveParser = function recursiveParser(parserThunk) {
 };
 
 //           takeRight :: Parser e a s -> Parser f b t -> Parser f b t
-export const takeRight = lParser => rParser => lParser.chain(() => rParser);
+export const takeRight = function takeRight(leftParser) {
+  return function takeRight$rightParser(rightParser) {
+    return leftParser.chain(() => rightParser);
+  }
+}
 
 //           takeLeft :: Parser e a s -> Parser f b t -> Parser e a s
-export const takeLeft = lParser => rParser => lParser.chain(x => rParser.map(() => x));
+export const takeLeft = function takeLeft(leftParser) {
+  return function takeLeft$rightParser(rightParser) {
+    return leftParser.chain(x => rightParser.map(() => x));
+  }
+}
 
 //           toPromise :: ParserResult e a s -> Promise (e, Integer, s) a
-export const toPromise = result => {
+export const toPromise = function toPromise(result) {
   return result.isError
     ? Promise.reject({
-      error: result.error,
-      index: result.index,
-      data: result.data
-    })
+        error: result.error,
+        index: result.index,
+        data: result.data
+      })
     : Promise.resolve(result.result);
 };
 
 //           toValue :: ParserResult e a s -> a
-export const toValue = result => {
+export const toValue = function toValue(result) {
   if (result.isError) {
     const e = new Error(result.error);
     e.parseIndex = result.index;
