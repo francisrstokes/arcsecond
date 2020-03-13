@@ -7,6 +7,7 @@
   "scripts": {
     "test": "npm run build && jest",
     "test:nobuild": "jest",
+    "test:types": "tsd",
     "repl": "node -r esm",
     "build": "babel index.mjs -o index.js",
     "pre-commit": "lint-staged"
@@ -31,6 +32,7 @@
     "jest": "^24.8.0",
     "lint-staged": "^10.0.8",
     "prettier": "^1.19.1",
-    "standard": "^14.3.1"
+    "standard": "^14.3.1",
+    "tsd": "^0.11.0"
   }
 }
