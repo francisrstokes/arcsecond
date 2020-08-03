@@ -1,4 +1,6 @@
-# Arcsecond 2.0.x
+# Arcsecond
+
+<img src="./logo.png">
 
 Arcsecond is a zero-dependency, Fantasy Land compliant JavaScript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
