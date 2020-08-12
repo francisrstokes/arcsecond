@@ -1,2 +1,6 @@
 .sketchpad
 node_modules/
+coverage/
+examples/
+test/
+tutorial/
