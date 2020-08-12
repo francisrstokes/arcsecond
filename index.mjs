@@ -283,24 +283,34 @@ export const either = function either(parser) {
 
 //           coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s
 export const coroutine = function coroutine(g) {
-  return Parser.of().chain(_ => {
+  return new Parser(function coroutine$state(state) {
     const generator = g();
 
-    const step = nextValue => {
+    let nextValue = undefined;
+    let nextState = state;
+
+    while (true) {
       const result = generator.next(nextValue);
       const value = result.value;
       const done = result.done;
 
-      if (!done && (!value || typeof value.chain !== 'function')) {
+      if (!done && !(value && value instanceof Parser)) {
         throw new Error(
           `[coroutine] yielded values must be Parsers, got ${result.value}.`,
         );
       }
 
-      return done ? Parser.of(value) : value.chain(step);
-    };
+      if (done) {
+        return updateResult(nextState, value);
+      }
 
-    return step();
+      nextState = value.p(nextState);
+      if (nextState.isError) {
+        return nextState;
+      }
+
+      nextValue = nextState.result;
+    }
   });
 };
 
