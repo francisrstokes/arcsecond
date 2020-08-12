@@ -49,6 +49,10 @@ const {
 const f = x => ({ f: x });
 const g = x => ({ g: x });
 
+
+// https://github.com/fluture-js/Fluture/blob/0ae92d9d61ca8f112ef2bb2327b7e8680100bff1/test/util/util.js#L8
+const MAX_STACK_SIZE = (function r (){try{return 1 + r()}catch(e){return 1}}());
+
 const expectEquivalence = (parserA, parserB) => () => {
   const strings = [
     'hello world',
@@ -1071,3 +1075,18 @@ testMany('ap (laws)', [
     letters.ap(Parser.of(g)).ap(Parser.of(f)),
   ),
 ]);
+
+test('coroutine is stack safe', () => {
+  const doubleStack = MAX_STACK_SIZE * 2;
+  const input = 'a'.repeat(doubleStack);
+
+  const parser = coroutine(function* () {
+    let out = '';
+    for (let i = 0; i < doubleStack; i++) {
+      out += (yield letter).toUpperCase();
+    }
+    return out;
+  });
+
+  expect(parse(parser)(input).result).toEqual('A'.repeat(doubleStack));
+});
