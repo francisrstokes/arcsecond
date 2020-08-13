@@ -1,10 +1,13 @@
+const {TextEncoder} = require('util');
 const {
   Parser,
   parse,
   char,
+  anyChar,
   str,
   digit,
   fail,
+  peek,
   many,
   many1,
   digits,
@@ -19,9 +22,11 @@ const {
   choice,
   between,
   everythingUntil,
+  everyCharUntil,
   pipeParsers,
   composeParsers,
   anythingExcept,
+  anyCharExcept,
   lookAhead,
   possibly,
   skip,
@@ -46,9 +51,10 @@ const {
   withData,
 } = require('../index');
 
+const encoder = new TextEncoder();
+
 const f = x => ({ f: x });
 const g = x => ({ g: x });
-
 
 // https://github.com/fluture-js/Fluture/blob/0ae92d9d61ca8f112ef2bb2327b7e8680100bff1/test/util/util.js#L8
 const MAX_STACK_SIZE = (function r (){try{return 1 + r()}catch(e){return 1}}());
@@ -111,10 +117,49 @@ testMany.only = (msg, testFns) => {
   });
 };
 
+
+test('ArrayBuffer as input', () => {
+  const input = Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0))).buffer;
+  const parser = sequenceOf([
+    letters,
+    char(' '),
+    letters,
+    char('!'),
+    endOfInput
+  ]);
+  expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
+});
+
+test('TypedArray as input', () => {
+  const input = Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0)));
+  const parser = sequenceOf([
+    letters,
+    char(' '),
+    letters,
+    char('!'),
+    endOfInput
+  ]);
+  expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
+});
+
+test('DataView as input', () => {
+  const input = new DataView(Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0))).buffer);
+  const parser = sequenceOf([
+    letters,
+    char(' '),
+    letters,
+    char('!'),
+    endOfInput
+  ]);
+  expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
+});
+
 test('Parser', expectedSuccessTest(new Parser(x => x), null, 'something'));
 
 testMany('char', [
   expectedSuccessTest(char('a'), 'a', 'abc123'),
+  expectedSuccessTest(char('😁'), '😁', '😁bc123'),
+  expectedSuccessTest(char('ƒ'), 'ƒ', 'ƒbc123'),
   expectedFailTest(char('a'), '123'),
   expectedFailTest(char('a'), ''),
   () => {
@@ -122,6 +167,20 @@ testMany('char', [
       'char must be called with a single character, but got abc',
     );
   },
+]);
+
+testMany('anyChar', [
+  expectedSuccessTest(anyChar, 'a', 'abc123'),
+  expectedSuccessTest(anyChar, '😁', '😁bc123'),
+  expectedSuccessTest(anyChar, 'ƒ', 'ƒbc123'),
+  expectedFailTest(anyChar, ''),
+]);
+
+testMany('peek', [
+  expectedSuccessTest(peek, 'a'.charCodeAt(0), 'abc123'),
+  expectedSuccessTest(peek, encoder.encode('😁')[0], '😁bc123'),
+  expectedSuccessTest(peek, encoder.encode('ƒ')[0], 'ƒbc123'),
+  expectedFailTest(peek, ''),
 ]);
 
 testMany('endOfInput', [
@@ -290,6 +349,8 @@ testMany('regex', [
 
 testMany('anyOfString', [
   expectedSuccessTest(anyOfString('abcdef'), 'c', 'can I match'),
+  expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '≤', '≤can I match'),
+  expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '🔺', '🔺can I match'),
   expectedFailTest(anyOfString('abcdef'), 'zebra'),
 ]);
 
@@ -345,8 +406,8 @@ testMany('sepBy', [
 
 testMany('sepBy1', [
   expectedSuccessTest(sepBy1(char(','))(letter), ['a', 'b', 'c'], 'a,b,c'),
-  expectedFailTest(sepBy1(char(','))(letter), [], ''),
-  expectedFailTest(sepBy1(char(','))(letter), [], '1,2,3'),
+  expectedFailTest(sepBy1(char(','))(letter), ''),
+  expectedFailTest(sepBy1(char(','))(letter), '1,2,3'),
   expectedFailTest(sepBy1(char(','))(letter), 'a,b,'),
 ]);
 
@@ -414,7 +475,7 @@ testMany('composeParsers', [
 testMany('everythingUntil', [
   expectedSuccessTest(
     everythingUntil(char('!')),
-    'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥',
+    [...encoder.encode('dsv2#%3423√ç∫˜µ˚∆˙∫√†¥')],
     'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
   ),
   expectedSuccessTest(
@@ -422,8 +483,23 @@ testMany('everythingUntil', [
     '!',
     'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
   ),
-  expectedSuccessTest(everythingUntil(char('!')), '', '!'),
-  expectedFailTest(everythingUntil(char('!')), ''),
+  expectedSuccessTest(everythingUntil(char('!')), [], '!'),
+  expectedFailTest(everythingUntil(char('!')), '')
+]);
+
+testMany('everyCharUntil', [
+  expectedSuccessTest(
+    everyCharUntil(char('!')),
+    'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥',
+    'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
+  ),
+  expectedSuccessTest(
+    pipeParsers([everyCharUntil(char('!')), char('!')]),
+    '!',
+    'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
+  ),
+  expectedSuccessTest(everyCharUntil(char('!')), '', '!'),
+  expectedFailTest(everyCharUntil(char('!')), '')
 ]);
 
 test('errorMapTo', () => {
@@ -442,10 +518,17 @@ test('errorMapTo', () => {
 });
 
 testMany('anythingExcept', [
-  expectedSuccessTest(anythingExcept(char('!')), 'a', 'a'),
-  expectedSuccessTest(anythingExcept(char('!')), '1', '1'),
-  expectedSuccessTest(anythingExcept(char('!')), '√', '√'),
+  expectedSuccessTest(anythingExcept(char('!')), 'a'.charCodeAt(0), 'a'),
+  expectedSuccessTest(anythingExcept(char('!')), '1'.charCodeAt(0), '1'),
+  expectedSuccessTest(anythingExcept(char('!')), encoder.encode('√')[0], '√'),
   expectedFailTest(anythingExcept(char('!')), '!'),
+]);
+
+testMany('anyCharExcept', [
+  expectedSuccessTest(anyCharExcept(char('!')), 'a', 'a'),
+  expectedSuccessTest(anyCharExcept(char('!')), '1', '1'),
+  expectedSuccessTest(anyCharExcept(char('!')), '√', '√'),
+  expectedFailTest(anyCharExcept(char('!')), '!'),
 ]);
 
 testMany('lookAhead', [
@@ -549,28 +632,22 @@ test('tapParser', () => {
 
   expectedSuccessTest(parser, 'a', 'abc')();
   expect(wasCalled).toBe(true);
-  expect(value).toEqual({
-    index: 1,
-    data: null,
-    target: 'abc',
-    isError: false,
-    error: null,
-    result: 'a',
-  });
+  expect(value.index).toEqual(1);
+  expect(value.data).toEqual(null);
+  expect(value.isError).toEqual(false);
+  expect(value.error).toEqual(null);
+  expect(value.result).toEqual('a');
 
   wasCalled = false;
   value = null;
 
   expectedFailTest(parser, 'xyz')();
   expect(wasCalled).toBe(true);
-  expect(value).toEqual({
-    index: 0,
-    data: null,
-    target: 'xyz',
-    result: null,
-    isError: true,
-    error: `ParseError (position 0): Expecting character 'a', got 'x'`,
-  });
+  expect(value.index).toEqual(0);
+  expect(value.data).toEqual(null);
+  expect(value.result).toEqual(null);
+  expect(value.isError).toEqual(true);
+  expect(value.error).toEqual(`ParseError (position 0): Expecting character 'a', got 'x'`);
 });
 
 test('toPromise', async () => {
@@ -595,7 +672,7 @@ test('toPromise', async () => {
 });
 
 test('toValue', () => {
-  const lv = parse(str('oh no'))('nope');
+  const lv = parse(str('oh no'))('nope not here');
   const rv = parse(str('oh yes'))('oh yes');
 
   try {
@@ -603,7 +680,7 @@ test('toValue', () => {
     throw new Error('Expected to throw error');
   } catch (ex) {
     expect(ex.message).toBe(
-      `ParseError (position 0): Expecting string 'oh no', got 'nope...'`,
+      `ParseError (position 0): Expecting string 'oh no', got 'nope ...'`,
     );
     expect(ex.parseIndex).toBe(0);
   }
@@ -970,7 +1047,7 @@ testMany('map (laws)', [
 
 testMany('errorMap (laws)', [
   expectEquivalence(
-    fail('nope').errorMap(x => x),
+    fail('nope').errorMap(({error}) => error),
     fail('nope'),
   ),
   expectEquivalence(
@@ -981,11 +1058,12 @@ testMany('errorMap (laws)', [
   ),
 ]);
 
-test('map (equivalence to mapTo)', () => {
-  const fn = x => ({ value: x });
+test('errorMap (equivalence to errorMapTo)', () => {
+  const fnMap = ({error}) => ({ value: error });
+  const fnMapTo = x => ({ value: x });
 
-  const failMap = fail('nope').errorMap(fn);
-  const failMapTo = pipeParsers([fail('nope'), errorMapTo(fn)]);
+  const failMap = fail('nope').errorMap(fnMap);
+  const failMapTo = pipeParsers([fail('nope'), errorMapTo(fnMapTo)]);
 
   expectEquivalence(failMap, failMapTo)();
 });
