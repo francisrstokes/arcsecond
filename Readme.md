@@ -4,7 +4,7 @@
 
 Arcsecond is a zero-dependency, Fantasy Land compliant JavaScript [Parser Combinator](https://en.wikipedia.org/wiki/Parser_combinator) library largely inspired by Haskell's Parsec.
 
-A fairly extensive peer-library called [arcsecond-binary](https://github.com/francisrstokes/arcsecond-binary) exists for parsing binary data usiing the same functional parser combinator approach.
+The [arcsecond-binary](https://github.com/francisrstokes/arcsecond-binary) peer library includes parsers specifically for working with binary data.
 
 ---
 
@@ -15,14 +15,18 @@ A fairly extensive peer-library called [arcsecond-binary](https://github.com/fra
   - [Usage](#usage)
   - [Running the examples](#running-the-examples)
   - [API](#api)
+    <details>
+      <summary>Click to expand</summary>
+
     - [Parser Methods](#methods)
       - [.run](#run)
       - [.fork](#fork)
       - [.map](#map)
+      - [.errorMap](#errorMap)
+      - [.errorChain](#errorChain)
       - [.chain](#chain)
       - [.mapFromData](#mapFromData)
       - [.chainFromData](#chainFromData)
-      - [.errorChain](#errorChain)
     - [Functions](#functions)
       - [setData](#setData)
       - [withData](#withData)
@@ -30,6 +34,7 @@ A fairly extensive peer-library called [arcsecond-binary](https://github.com/fra
       - [getData](#getData)
       - [coroutine](#coroutine)
       - [char](#char)
+      - [anyChar](#anyChar)
       - [str](#str)
       - [digit](#digit)
       - [digits](#digits)
@@ -37,6 +42,7 @@ A fairly extensive peer-library called [arcsecond-binary](https://github.com/fra
       - [letters](#letters)
       - [whitespace](#whitespace)
       - [optionalWhitespace](#optionalWhitespace)
+      - [peek](#peek)
       - [anyOfString](#anyOfString)
       - [regex](#regex)
       - [sequenceOf](#sequenceOf)
@@ -49,7 +55,9 @@ A fairly extensive peer-library called [arcsecond-binary](https://github.com/fra
       - [many1](#many1)
       - [between](#between)
       - [everythingUntil](#everythingUntil)
+      - [everyCharUntil](#everyCharUntil)
       - [anythingExcept](#anythingExcept)
+      - [anyCharExcept](#anyCharExcept)
       - [possibly](#possibly)
       - [endOfInput](#endOfInput)
       - [skip](#skip)
@@ -68,6 +76,8 @@ A fairly extensive peer-library called [arcsecond-binary](https://github.com/fra
       - [toPromise](#toPromise)
       - [toValue](#toValue)
       - [parse](#parse)
+  </details>
+
   - [A note on recursive grammars](#a-note-on-recursive-grammars)
   - [Fantasy Land](#fantasy-land)
     - [Equivalent Operations](#equivalent-operations)
@@ -104,7 +114,7 @@ The tutorials provide a practical introduction to many of the concepts in arcsec
 You can use ES6 imports or CommonJS requires.
 
 ```JavaScript
-const {parse, char} = require('arcsecond');
+const {char} = require('arcsecond');
 
 const parsingResult = char('a').fork(
   // The string to parse
@@ -154,7 +164,7 @@ The main "type" in arcsecond is `Parser e a s`:
 
 `.run :: Parser e a s ~> x -> Either e a`
 
-`.run` is a method on every parser, which takes a string, and returns the result of parsing the string using the parser.
+`.run` is a method on every parser, which takes input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), and returns the result of parsing the input using the parser.
 
 **Example**
 ```JavaScript
@@ -171,7 +181,7 @@ str('hello').run('hello')
 
 `.fork :: Parser e a s ~> x -> (e -> ParserState e a s -> f) -> (a -> ParserState e a s -> b)`
 
-The `.fork` method is similar to `.run`. It takes a string, an *error transforming function* and a *success transforming function*, and parses the string. If parsing was successful, the result is transformed using the *success transforming function* and returned. If parsing was not successful, the result is transformed using the *error transforming function* and returned.
+The `.fork` method is similar to `.run`. It takes input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), an *error transforming function* and a *success transforming function*, and parses the input. If parsing was successful, the result is transformed using the *success transforming function* and returned. If parsing was not successful, the result is transformed using the *error transforming function* and returned.
 
 **Example**
 ```JavaScript
@@ -356,6 +366,25 @@ parser({ bypassNormalApproach: true }).run('hello world');
 //      error: "ParseError (position 6): Expecting digits",
 //      index: 6,
 //      data: { bypassNormalApproach: true }
+//    }
+```
+
+#### .errorMap
+
+`.errorMap :: Parser e a s ~> ((e, Integer, s) -> f) -> Parser f a s`
+
+`.errorMap` is like [.map](#map) but it transforms the error value. The function passed to `.errorMap` gets an object the *current error message* (`error`) , the *index* (`index`) that parsing stopped at, and the *data* (`data`) from this parsing session.
+
+**Example**
+```JavaScript
+const newParser = letters.errorMap(({error, index}) => `Old message was: [${error}] @ index ${index}`);
+
+newParser.run('1234')
+// -> {
+//      isError: true,
+//      error: "Old message was: [ParseError (position 0): Expecting letters] @ index 0",
+//      index: 0,
+//      data: null
 //    }
 ```
 
@@ -654,6 +683,31 @@ char ('h').run('hello')
 //    }
 ```
 
+#### anyChar
+
+`anyChar :: Parser e Char s`
+
+`anyChar` matches **exactly one** utf-8 character.
+
+**Example**
+```JavaScript
+anyChar.run('a')
+// -> {
+//      isError: false,
+//      result: "a",
+//      index: 1,
+//      data: null
+//    }
+
+anyChar.run('😉')
+// -> {
+//      isError: false,
+//      result: "😉",
+//      index: 4,
+//      data: null
+//    }
+```
+
 #### str
 
 `str :: String -> Parser e String s`
@@ -797,6 +851,34 @@ newParser.run('helloworld')
 //      isError: false,
 //      result: [ "hello", "", "world" ],
 //      index: 10,
+//      data: null
+//    }
+```
+
+#### peek
+
+`peek :: Parser e String s`
+
+`peek` matches **exactly one** *numerical byte* without consuming any input.
+
+**Example**
+```JavaScript
+peek.run('hello world')
+// -> {
+//      isError: false,
+//      result: 104,
+//      index: 0,
+//      data: null
+//    }
+
+sequenceOf([
+  str('hello'),
+  peek
+]).run('hello world')
+// -> {
+//      isError: false,
+//      result: [ "hello", 32 ],
+//      index: 5,
 //      data: null
 //    }
 ```
@@ -1111,14 +1193,16 @@ betweenRoundBrackets (many (letters)).run('(hello world)')
 
 `everythingUntil :: Parser e a s -> Parser e String s`
 
-`everythingUntil` takes a *termination* parser and returns a new parser which matches everything up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
+**Note**: Between 2.x and 3.x, the definition of the `everythingUntil` has changed. In 3.x, what was previously `everythingUntil` is now [`everyCharUntil`](#everyCharUntil).
+
+`everythingUntil` takes a *termination* parser and returns a new parser which matches every possible *numerical byte* up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
 
 **Example**
 ```JavaScript
 everythingUntil (char ('.')).run('This is a sentence.This is another sentence')
 // -> {
 //      isError: false,
-//      result: "This is a sentence",
+//      result: [84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 115, 101, 110, 116, 101, 110, 99, 101],
 //      index: 18,
 //      data: null
 //    }
@@ -1139,18 +1223,52 @@ newParser.run('This is a sentence.This is another sentence')
 //    }
 ```
 
+#### everyCharUntil
+
+`everyCharUntil :: Parser e a s -> Parser e String s`
+
+`everyCharUntil` takes a *termination* parser and returns a new parser which matches every possible *character* up until a value is matched by the *termination* parser. When a value is matched by the *termination* parser, it is not "consumed".
+
+**Example**
+```JavaScript
+everyCharUntil (char ('.')).run('This is a sentence.This is another sentence')
+// -> {
+//      isError: false,
+//      result: 'This is a sentence',
+//      index: 18,
+//      data: null
+//    }
+
+// termination parser doesn't consume the termination value
+const newParser = sequenceOf ([
+  everyCharUntil (char ('.')),
+  str ('This is another sentence')
+]);
+
+
+newParser.run('This is a sentence.This is another sentence')
+// -> {
+//      isError: true,
+//      error: "ParseError (position 18): Expecting string 'This is another sentence', got '.This is another sentenc...'",
+//      index: 18,
+//      data: null
+//    }
+```
+
 #### anythingExcept
 
 `anythingExcept :: Parser e a s -> Parser e Char s`
 
-`anythingExcept` takes a *exception* parser and returns a new parser which matches **exactly one** character, if it is not matched by the *exception* parser.
+**Note**: Between 2.x and 3.x, the definition of the `anythingExcept` has changed. In 3.x, what was previously `anythingExcept` is now [`anyCharExcept`](#anyCharExcept).
+
+`anythingExcept` takes a *exception* parser and returns a new parser which matches **exactly one** *numerical byte*, if it is not matched by the *exception* parser.
 
 **Example**
 ```JavaScript
 anythingExcept (char ('.')).run('This is a sentence.')
 // -> {
 //   isError: false,
-//   result: "T",
+//   result: 84,
 //   index: 1,
 //   data: null
 // }
@@ -1159,7 +1277,33 @@ const manyExceptDot = many (anythingExcept (char ('.')))
 manyExceptDot.run('This is a sentence.')
 // -> {
 //      isError: false,
-//      result: [ "T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "s", "e", "n", "t", "e", "n", "c", "e" ],
+//      result: [84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 115, 101, 110, 116, 101, 110, 99, 101, 46],
+//      index: 18,
+//      data: null
+//    }
+```
+
+#### anyCharExcept
+
+`anyCharExcept :: Parser e a s -> Parser e Char s`
+
+`anyCharExcept` takes a *exception* parser and returns a new parser which matches **exactly one** *character*, if it is not matched by the *exception* parser.
+
+**Example**
+```JavaScript
+anyCharExcept (char ('.')).run('This is a sentence.')
+// -> {
+//   isError: false,
+//   result: 'T',
+//   index: 1,
+//   data: null
+// }
+
+const manyExceptDot = many (anyCharExcept (char ('.')))
+manyExceptDot.run('This is a sentence.')
+// -> {
+//      isError: false,
+//      result: ['T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's', 'e', 'n', 't', 'e', 'n', 'c', 'e'],
 //      index: 18,
 //      data: null
 //    }
@@ -1590,7 +1734,7 @@ try {
 
 `parse :: Parser e a s -> String -> s -> Either e a`
 
-`parse` takes a parser and a string, and returns the result of parsing the string using the parser.
+`parse` takes a parser and input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), and returns the result of parsing the input using the parser.
 
 **Example**
 ```JavaScript
