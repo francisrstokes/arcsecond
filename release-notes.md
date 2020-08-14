@@ -1,5 +1,18 @@
 # Release notes
 
+## 3.0.0
+
+- Rewrite the internals of the library to use ArrayBuffer and DataView
+  - Input can be given as a string, ArrayBuffer, TypedArray, or DataView.
+  - Strings are automatically converted to an ArrayBuffer using a TextEncoder
+- Modify the `everythingUntil` parser to return an array of byte values
+  - Add a new parser `everyCharUntil` which acts the same as previous versions of `everythingUntil`
+- Modify the `anythingExcept` parser to return a byte
+  - Add a new parser `anyCharExcept` which acts the same as previous versions of `anythingExcept`
+- Add a new parser `anyChar`, which matches any utf8 encoded character
+- Add a new parser `peek`, which matches the next byte (in numerical form), without consuming any input
+- Changed argument format of `.errorMap()` to match `.errorChain()`
+
 ## 2.0.0
 
 - Adds in depth tutorials about practical use of arcsecond

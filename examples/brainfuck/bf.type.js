@@ -7,7 +7,6 @@ const Bf = taggedSum('Bf', {
   MoveLeft: [],
   PrintByte: [],
   GetByte: [],
-  GetByte: [],
   Loop: ['x'],
   Instructions: ['x']
 });
