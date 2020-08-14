@@ -5,6 +5,7 @@ const {
   str,
   digit,
   fail,
+  exactly,
   many,
   many1,
   digits,
@@ -44,7 +45,7 @@ const {
   mapData,
   endOfInput,
   withData
-} = require('../index')
+} = require('../index');
 
 const f = x => ({ f: x });
 const g = x => ({ g: x });
@@ -264,6 +265,15 @@ testMany(
     expectedSuccessTest(succeedWith('yes'), 'yes', 'abc123'),
     expectedSuccessTest(succeedWith('yes'), 'yes', ''),
     expectedSuccessTest(succeedWith('yes'), 'yes', '12435'),
+  ]
+);
+
+testMany(
+  'exactly', [
+    expectedSuccessTest(exactly (3, char('*')), '***'.split(''), '***'),
+    expectedSuccessTest(exactly (4, digit), '1234'.split(''), '1234abc'),
+    expectedFailTest(exactly (4, digit), 'abc'),
+    expectedThrowTest(() => exactly ('a', digit), '123abc', `exactly must be called with a number > 0, but got a`)
   ]
 );
 
