@@ -311,10 +311,10 @@ testMany('succeedWith', [
 
 testMany(
   'exactly', [
-    expectedSuccessTest(exactly (3, char('*')), '***'.split(''), '***'),
-    expectedSuccessTest(exactly (4, digit), '1234'.split(''), '1234abc'),
-    expectedFailTest(exactly (4, digit), 'abc'),
-    expectedThrowTest(() => exactly ('a', digit), '123abc', `exactly must be called with a number > 0, but got a`)
+    expectedSuccessTest(exactly(3)(char('*')), '***'.split(''), '***'),
+    expectedSuccessTest(exactly(4)(digit), '1234'.split(''), '1234abc'),
+    expectedFailTest(exactly(4)(digit), 'abc'),
+    expectedThrowTest(() => exactly('a')(digit), '123abc', `exactly must be called with a number > 0, but got a`)
   ]
 );
 

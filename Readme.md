@@ -1091,13 +1091,13 @@ newParser.run('1,2,3')
 
 #### exactly
 
-`exactly :: (Integer, Parser e s a) -> Parser e s [a]`
+`exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]`
 
-`exactly` takes a positive number and parser, and returns a new parser which matches that parser the given number of times.
+`exactly` takes a positive number and returns a function. That function takes a parser and returns a new parser which matches the given parser the specified number of times.
 
 **Example**
 ```JavaScript
-const newParser = exactly (4, letter)
+const newParser = exactly (4)(letter)
 
 newParser.run('abcdef')
 // -> {

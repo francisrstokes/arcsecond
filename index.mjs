@@ -431,29 +431,31 @@ export const coroutine = function coroutine(g) {
   });
 };
 
-//           exactly :: (Integer, Parser e s a) -> Parser e s [a]
-export const exactly = function exactly(n, parser) {
+//           exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
+export const exactly = function exactly(n) {
   if (typeof n !== 'number' || n <= 0) {
     throw new TypeError (`exactly must be called with a number > 0, but got ${n}`);
   }
-  return new Parser(function exactly$state(state) {
-    if (state.isError) return state;
+  return function exactly$factory(parser) {
+    return new Parser(function exactly$factory$state(state) {
+      if (state.isError) return state;
 
-    const results = [];
-    let nextState = state;
+      const results = [];
+      let nextState = state;
 
-    for (let i = 0; i < n; i++) {
-      const out = parser.p(nextState);
-      if(out.isError) {
-        return out;
-      } else {
-        nextState = out;
-        results.push(nextState.result);
+      for (let i = 0; i < n; i++) {
+        const out = parser.p(nextState);
+        if(out.isError) {
+          return out;
+        } else {
+          nextState = out;
+          results.push(nextState.result);
+        }
       }
-    }
 
-    return updateResult(nextState, results);
-  }).errorMap((_, index) => `ParseError (position ${index}): Expecting ${n}${_.error.replace(reErrorExpectation, '')}`);
+      return updateResult(nextState, results);
+    }).errorMap(({index, error}) => `ParseError (position ${index}): Expecting ${n}${error.replace(reErrorExpectation, '')}`);
+  }
 }
 
 //           many :: Parser e s a -> Parser e s [a]
