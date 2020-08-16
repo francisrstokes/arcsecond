@@ -9,6 +9,7 @@ const reDigits = /^[0-9]+/;
 const reLetter = /[a-zA-Z]/;
 const reLetters = /^[a-zA-Z]+/;
 const reWhitespaces = /^\s+/;
+const reErrorExpectation = /ParseError.+Expecting/;
 
 const isTypedArray = x => (
   x instanceof Uint8Array ||
@@ -429,6 +430,33 @@ export const coroutine = function coroutine(g) {
     }
   });
 };
+
+//           exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
+export const exactly = function exactly(n) {
+  if (typeof n !== 'number' || n <= 0) {
+    throw new TypeError (`exactly must be called with a number > 0, but got ${n}`);
+  }
+  return function exactly$factory(parser) {
+    return new Parser(function exactly$factory$state(state) {
+      if (state.isError) return state;
+
+      const results = [];
+      let nextState = state;
+
+      for (let i = 0; i < n; i++) {
+        const out = parser.p(nextState);
+        if(out.isError) {
+          return out;
+        } else {
+          nextState = out;
+          results.push(nextState.result);
+        }
+      }
+
+      return updateResult(nextState, results);
+    }).errorMap(({index, error}) => `ParseError (position ${index}): Expecting ${n}${error.replace(reErrorExpectation, '')}`);
+  }
+}
 
 //           many :: Parser e s a -> Parser e s [a]
 export const many = function many(parser) {

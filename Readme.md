@@ -51,6 +51,7 @@ The [arcsecond-binary](https://github.com/francisrstokes/arcsecond-binary) peer 
       - [lookAhead](#lookAhead)
       - [sepBy](#sepBy)
       - [sepBy1](#sepBy1)
+      - [exactly](#exactly)
       - [many](#many)
       - [many1](#many1)
       - [between](#between)
@@ -1083,6 +1084,41 @@ newParser.run('1,2,3')
 // -> {
 //      isError: true,
 //      error: "ParseError 'sepBy1' (position 0): Expecting to match at least one separated value",
+//      index: 0,
+//      data: null
+//    }
+```
+
+#### exactly
+
+`exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]`
+
+`exactly` takes a positive number and returns a function. That function takes a parser and returns a new parser which matches the given parser the specified number of times.
+
+**Example**
+```JavaScript
+const newParser = exactly (4)(letter)
+
+newParser.run('abcdef')
+// -> {
+//      isError: false,
+//      result: [ "a", "b", "c", "d" ],
+//      index: 4,
+//      data: null
+//    }
+
+newParser.run('abc')
+// -> {
+//      isError: true,
+//      error: 'ParseError (position 0): Expecting 4 letter, but got end of input.',
+//      index: 0,
+//      data: null
+//    }
+
+newParser.run('12345')
+// -> {
+//      isError: true,
+//      error: 'ParseError (position 0): Expecting 4 letter, got '1'',
 //      index: 0,
 //      data: null
 //    }

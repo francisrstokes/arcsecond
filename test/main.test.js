@@ -7,6 +7,7 @@ const {
   str,
   digit,
   fail,
+  exactly,
   peek,
   many,
   many1,
@@ -307,6 +308,15 @@ testMany('succeedWith', [
   expectedSuccessTest(succeedWith('yes'), 'yes', ''),
   expectedSuccessTest(succeedWith('yes'), 'yes', '12435'),
 ]);
+
+testMany(
+  'exactly', [
+    expectedSuccessTest(exactly(3)(char('*')), '***'.split(''), '***'),
+    expectedSuccessTest(exactly(4)(digit), '1234'.split(''), '1234abc'),
+    expectedFailTest(exactly(4)(digit), 'abc'),
+    expectedThrowTest(() => exactly('a')(digit), '123abc', `exactly must be called with a number > 0, but got a`)
+  ]
+);
 
 testMany('many', [
   expectedSuccessTest(many(digit), '1234'.split(''), '1234abc'),
