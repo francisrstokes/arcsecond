@@ -53,36 +53,17 @@ const getString = (index, length, dataView) => {
   const decodedString = decoder.decode(bytes);
   return decodedString;
 };
-const getUtf8Char = (index, dataView) => {
-  const b1 = dataView.getUint8(index);
-  if ((b1 & 0x80) >> 7 === 0) {
-    return [String.fromCharCode(b1), 1];
-  } else if ((b1 & 0xe0) >> 5 === 0b110) {
-    const bytes = [
-      b1,
-      dataView.getUint8(index + 1)
-    ];
-    return [decoder.decode(new Uint8Array(bytes)), 2];
-  } else if ((b1 & 0xf0) >> 4 === 0b1110) {
-    const bytes = [
-      b1,
-      dataView.getUint8(index + 1),
-      dataView.getUint8(index + 2),
-    ];
-    return [decoder.decode(new Uint8Array(bytes)), 3];
-  } else if ((b1 & 0xf0) >> 4 === 0b1111) {
-    const bytes = [
-      b1,
-      dataView.getUint8(index + 1),
-      dataView.getUint8(index + 2),
-      dataView.getUint8(index + 3),
-    ];
-    return [decoder.decode(new Uint8Array(bytes)), 4];
-  }
-
-  // This should only happen if we're trying to read a character from somewhere in
-  // the middle of a utf8 character (i.e. not byte #1)
-  return [String.fromCharCode(b1), 1];
+const getNextCharWidth = (index, dataView) => {
+  const byte = dataView.getUint8(index);
+  if ((byte & 0x80) >> 7 === 0) return 1;
+  else if ((byte & 0xe0) >> 5 === 0b110) return 2;
+  else if ((byte & 0xf0) >> 4 === 0b1110) return 3;
+  else if ((byte & 0xf0) >> 4 === 0b1111) return 4;
+  return 1;
+}
+const getUtf8Char = (index, length, dataView) => {
+  const bytes = Uint8Array.from({length}, (_, i) => dataView.getUint8(index + i));
+  return decoder.decode(bytes);
 };
 const getCharacterLength = str => {
   let cp;
@@ -529,13 +510,16 @@ export const char = function char(c) {
 
     const { index, dataView } = state;
     if (index < dataView.byteLength) {
-      const [char, charWidth] = getUtf8Char(index, dataView);
-      return char === c
-        ? updateParserState(state, c, index + charWidth)
-        : updateError(
-            state,
-            `ParseError (position ${index}): Expecting character '${c}', got '${char}'`,
-          );
+      const charWidth = getNextCharWidth(index, dataView);
+      if (index + charWidth <= dataView.byteLength) {
+        const char = getUtf8Char(index, charWidth, dataView);
+        return char === c
+          ? updateParserState(state, c, index + charWidth)
+          : updateError(
+              state,
+              `ParseError (position ${index}): Expecting character '${c}', got '${char}'`,
+            );
+      }
     }
     return updateError(
       state,
@@ -550,8 +534,11 @@ export const anyChar = new Parser(function anyChar$state(state) {
 
   const { index, dataView } = state;
   if (index < dataView.byteLength) {
-    const [char, charWidth] = getUtf8Char(index, dataView);
-    return updateParserState(state, char, index + charWidth)
+    const charWidth = getNextCharWidth(index, dataView);
+    if (index + charWidth <= dataView.byteLength) {
+      const char = getUtf8Char(index, charWidth, dataView);
+      return updateParserState(state, char, index + charWidth);
+    }
   }
   return updateError(
     state,
@@ -648,13 +635,16 @@ export const digit = new Parser(function digit$state(state) {
   const { dataView, index } = state;
 
   if (dataView.byteLength > index) {
-    const [char, charWidth] = getUtf8Char(index, dataView);
-    return dataView.byteLength && char && reDigit.test(char)
-      ? updateParserState(state, char, index + charWidth)
-      : updateError(
-          state,
-          `ParseError (position ${index}): Expecting digit, got '${char}'`,
-        );
+    const charWidth = getNextCharWidth(index, dataView);
+    if (index + charWidth <= dataView.byteLength) {
+      const char = getUtf8Char(index, charWidth, dataView);
+      return dataView.byteLength && char && reDigit.test(char)
+        ? updateParserState(state, char, index + charWidth)
+        : updateError(
+            state,
+            `ParseError (position ${index}): Expecting digit, got '${char}'`,
+          );
+    }
   }
 
   return updateError(
@@ -675,13 +665,16 @@ export const letter = new Parser(function letter$state(state) {
   const { index, dataView } = state;
 
   if (dataView.byteLength > index) {
-    const [char, charWidth] = getUtf8Char(index, dataView);
-    return dataView.byteLength && char && reLetter.test(char)
-      ? updateParserState(state, char, index + charWidth)
-      : updateError(
-          state,
-          `ParseError (position ${index}): Expecting letter, got '${char}'`,
-        );
+    const charWidth = getNextCharWidth(index, dataView);
+    if (index + charWidth <= dataView.byteLength) {
+      const char = getUtf8Char(index, charWidth, dataView);
+      return dataView.byteLength && char && reLetter.test(char)
+        ? updateParserState(state, char, index + charWidth)
+        : updateError(
+            state,
+            `ParseError (position ${index}): Expecting letter, got '${char}'`,
+          );
+    }
   }
 
   return updateError(
@@ -703,13 +696,16 @@ export const anyOfString = function anyOfString(s) {
     const { dataView, index } = state;
 
     if (dataView.byteLength > index) {
-      const [char, charWidth] = getUtf8Char(index, dataView);
-      return s.includes(char)
-        ? updateParserState(state, char, index + charWidth)
-        : updateError(
-            state,
-            `ParseError (position ${index}): Expecting any of the string "${s}", got ${char}`,
-          );
+      const charWidth = getNextCharWidth(index, dataView);
+      if (index + charWidth <= dataView.byteLength) {
+        const char = getUtf8Char(index, charWidth, dataView);
+        return s.includes(char)
+          ? updateParserState(state, char, index + charWidth)
+          : updateError(
+              state,
+              `ParseError (position ${index}): Expecting any of the string "${s}", got ${char}`,
+            );
+      }
     }
 
     return updateError(
@@ -919,8 +915,17 @@ export const anyCharExcept = function anyCharExcept(parser) {
 
     const out = parser.p(state);
     if (out.isError) {
-      const [char, charWidth] = getUtf8Char(index, dataView);
-      return updateParserState(state, char, index + charWidth);
+      if (index < dataView.byteLength) {
+        const charWidth = getNextCharWidth(index, dataView);
+        if (index + charWidth <= dataView.byteLength) {
+          const char = getUtf8Char(index, charWidth, dataView);
+          return updateParserState(state, char, index + charWidth);
+        }
+      }
+      return updateError(
+        state,
+        `ParseError 'anyCharExcept' (position ${index}): Unexpected end of input`,
+      );
     }
 
     return updateError(
