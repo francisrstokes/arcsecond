@@ -168,6 +168,7 @@ testMany('char', [
       'char must be called with a single character, but got abc',
     );
   },
+  expectedFailTest(char('a'), new Uint8Array([0b11110000]))
 ]);
 
 testMany('anyChar', [
@@ -175,6 +176,7 @@ testMany('anyChar', [
   expectedSuccessTest(anyChar, '😁', '😁bc123'),
   expectedSuccessTest(anyChar, 'ƒ', 'ƒbc123'),
   expectedFailTest(anyChar, ''),
+  expectedFailTest(anyChar, new Uint8Array([0b11110000]))
 ]);
 
 testMany('peek', [
@@ -274,6 +276,7 @@ testMany('digit', [
   expectedSuccessTest(digit, '1', '1234'),
   expectedFailTest(digit, 'abc123'),
   expectedFailTest(digit, ''),
+  expectedFailTest(digit, new Uint8Array([0b11110000]))
 ]);
 
 testMany('digits', [
@@ -288,6 +291,7 @@ testMany('letter', [
   expectedSuccessTest(letter, 'A', 'AbCd1234'),
   expectedFailTest(letter, '123ABxc'),
   expectedFailTest(letter, ''),
+  expectedFailTest(letter, new Uint8Array([0b11110000]))
 ]);
 
 testMany('letters', [
@@ -362,11 +366,8 @@ testMany('anyOfString', [
   expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '≤', '≤can I match'),
   expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '🔺', '🔺can I match'),
   expectedFailTest(anyOfString('abcdef'), 'zebra'),
-]);
+  expectedFailTest(anyOfString('abcdef'), new Uint8Array([0b11110000]))
 
-testMany('anyOfString', [
-  expectedSuccessTest(anyOfString('abcdef'), 'c', 'can I match'),
-  expectedFailTest(anyOfString('abcdef'), 'zebra'),
 ]);
 
 testMany('namedSequenceOf', [
@@ -539,6 +540,7 @@ testMany('anyCharExcept', [
   expectedSuccessTest(anyCharExcept(char('!')), '1', '1'),
   expectedSuccessTest(anyCharExcept(char('!')), '√', '√'),
   expectedFailTest(anyCharExcept(char('!')), '!'),
+  expectedFailTest(anyCharExcept(char('!')), new Uint8Array([0b11110000]))
 ]);
 
 testMany('lookAhead', [
