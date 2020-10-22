@@ -1180,3 +1180,27 @@ test('coroutine is stack safe', () => {
 
   expect(parse(parser)(input).result).toEqual('A'.repeat(doubleStack));
 });
+
+testMany('regression: regex captures the right number of characters', [
+  expectedSuccessTest(
+    sequenceOf([
+      str('('),
+      regex(/^aeioú/),
+      str(')'),
+    ]),
+    ['(', 'aeioú', ')'],
+    '(aeioú)',
+  ),
+])
+
+testMany('regression: str captures the right number of characters', [
+  expectedSuccessTest(
+    sequenceOf([
+      str('('),
+      str('aeioú'),
+      str(')'),
+    ]),
+    ['(', 'aeioú', ')'],
+    '(aeioú)',
+  )
+]);
