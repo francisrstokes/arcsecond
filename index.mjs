@@ -583,7 +583,7 @@ export const str = function str(s) {
 
     const stringAtIndex = getString(index, encodedStr.byteLength, dataView);
     return s === stringAtIndex
-      ? updateParserState(state, s, index + s.length)
+      ? updateParserState(state, s, index + encoder.encode(s).byteLength)
       : updateError(
           state,
           `ParseError (position ${index}): Expecting string '${s}', got '${stringAtIndex}...'`,
@@ -612,7 +612,7 @@ export const regex = function regex(re) {
     if (rest.length >= 1) {
       const match = rest.match(re);
       return match
-        ? updateParserState(state, match[0], index + match[0].length)
+        ? updateParserState(state, match[0], index + encoder.encode(match[0]).byteLength)
         : updateError(
             state,
             `ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(
