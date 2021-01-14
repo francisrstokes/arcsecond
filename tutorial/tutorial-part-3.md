@@ -62,7 +62,7 @@ const myResult = fullParser.fork(
   (result, parsingResult) => {
     console.log(`The final result: ${result}`);
     return result;
-  },
+  }
 );
 ```
 
