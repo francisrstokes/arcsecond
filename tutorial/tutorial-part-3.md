@@ -47,12 +47,6 @@ const myResult = fullParser.fork(
   // The string to parse
   'goodbye',
 
-  // An success handler
-  (result, parsingResult) => {
-    console.log(`The final result: ${result}`);
-    return result;
-  },
-
   // An error handler
   (error, parsingResult) => {
     // Here we can throw the error...
@@ -62,7 +56,13 @@ const myResult = fullParser.fork(
     if (error === somethingICanRecoverFrom) {
       return someOtherValue;
     }
-  }
+  },
+  
+  // A success handler
+  (result, parsingResult) => {
+    console.log(`The final result: ${result}`);
+    return result;
+  },
 );
 ```
 
