@@ -978,7 +978,7 @@ export const endOfInput = new Parser(function endOfInput$state(state) {
 
     return updateError(
       state,
-      `ParseError 'endOfInput' (position ${index}): Expected end of input but got '${errorByte}}'`,
+      `ParseError 'endOfInput' (position ${index}): Expected end of input but got '${errorByte}'`,
     );
   }
 
