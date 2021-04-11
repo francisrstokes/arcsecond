@@ -48,6 +48,7 @@ const {
   getData,
   setData,
   mapData,
+  startOfInput,
   endOfInput,
   withData,
 } = require('../index');
@@ -185,6 +186,13 @@ testMany('peek', [
   expectedSuccessTest(peek, encoder.encode('ƒ')[0], 'ƒbc123'),
   expectedFailTest(peek, ''),
 ]);
+
+test('startOfInput', () => {
+  const mustBeginWithHeading = sequenceOf([startOfInput, str('# ')]);
+  const parser = between(mustBeginWithHeading)(endOfInput)(everyCharUntil(endOfInput));
+  expectedSuccessTest(parser, 'Heading', '# Heading')();
+  expectedFailTest(parser, ' # Heading')();
+});
 
 testMany('endOfInput', [
   expectedSuccessTest(endOfInput, null, ''),

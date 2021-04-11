@@ -967,6 +967,20 @@ export const skip = function skip(parser) {
   });
 };
 
+//           startOfInput :: Parser e String s
+export const startOfInput = new Parser(function startOfInput$state(state) {
+  if (state.isError) return state;
+  const { index } = state;
+  if (index > 0) {
+    return updateError(
+      state,
+      `ParseError 'startOfInput' (position ${index}): Expected start of input'`,
+    );
+  }
+
+  return state;
+});
+
 //           endOfInput :: Parser e Null s
 export const endOfInput = new Parser(function endOfInput$state(state) {
   if (state.isError) return state;
