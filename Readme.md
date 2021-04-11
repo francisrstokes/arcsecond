@@ -60,6 +60,7 @@ The [arcsecond-binary](https://github.com/francisrstokes/arcsecond-binary) peer 
       - [anythingExcept](#anythingExcept)
       - [anyCharExcept](#anyCharExcept)
       - [possibly](#possibly)
+      - [startOfInput](#startOfInput)
       - [endOfInput](#endOfInput)
       - [skip](#skip)
       - [pipeParsers](#pipeParsers)
@@ -1363,6 +1364,37 @@ newParser.run('Yep I am here')
 //      isError: false,
 //      result: [ null, "Yep I am here" ],
 //      index: 13,
+//      data: null
+//    }
+```
+
+#### startOfInput
+
+`startOfInput :: Parser e String s`
+
+`startOfInput` is a parser that only succeeds when the parser is at the beginning of the input.
+
+**Example**
+```JavaScript
+const mustBeginWithHeading = sequenceOf([
+    startOfInput,
+    str("# ")
+  ]);
+const newParser = between(mustBeginWithHeading)(endOfInput)(everyCharUntil(endOfInput));
+
+newParser.run('# Heading');
+// -> {
+//      isError: false,
+//      result: "# Heading",
+//      index: 9,
+//      data: null
+//    }
+
+newParser.run(' # Heading');
+// -> {
+//      isError: true,
+//      error: "ParseError (position 0): Expecting string '# ', got ' #...'",
+//      index: 0,
 //      data: null
 //    }
 ```
