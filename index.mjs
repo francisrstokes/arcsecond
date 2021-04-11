@@ -11,7 +11,7 @@ const reLetters = /^[a-zA-Z]+/;
 const reWhitespaces = /^\s+/;
 const reErrorExpectation = /ParseError.+Expecting/;
 
-const isTypedArray = x => (
+const isTypedArray = x =>
   x instanceof Uint8Array ||
   x instanceof Uint8ClampedArray ||
   x instanceof Int8Array ||
@@ -20,14 +20,13 @@ const isTypedArray = x => (
   x instanceof Uint32Array ||
   x instanceof Int32Array ||
   x instanceof Float32Array ||
-  x instanceof Float64Array
-);
+  x instanceof Float64Array;
 
 const inputTypes = {
   STRING: 'string',
   ARRAY_BUFFER: 'arrayBuffer',
   TYPED_ARRAY: 'typedArray',
-  DATA_VIEW: 'dataView'
+  DATA_VIEW: 'dataView',
 };
 
 const text = {};
@@ -41,7 +40,9 @@ if (typeof TextEncoder !== 'undefined') {
     text.Encoder = util.TextEncoder;
     text.Decoder = util.TextDecoder;
   } catch (ex) {
-    throw new Error('Arcsecond requires TextEncoder and TextDecoder to be polyfilled.');
+    throw new Error(
+      'Arcsecond requires TextEncoder and TextDecoder to be polyfilled.',
+    );
   }
 }
 
@@ -49,7 +50,9 @@ const encoder = new text.Encoder();
 const decoder = new text.Decoder();
 
 const getString = (index, length, dataView) => {
-  const bytes = Uint8Array.from({length}, (_, i) => dataView.getUint8(index + i));
+  const bytes = Uint8Array.from({ length }, (_, i) =>
+    dataView.getUint8(index + i),
+  );
   const decodedString = decoder.decode(bytes);
   return decodedString;
 };
@@ -60,9 +63,11 @@ const getNextCharWidth = (index, dataView) => {
   else if ((byte & 0xf0) >> 4 === 0b1110) return 3;
   else if ((byte & 0xf0) >> 4 === 0b1111) return 4;
   return 1;
-}
+};
 const getUtf8Char = (index, length, dataView) => {
-  const bytes = Uint8Array.from({length}, (_, i) => dataView.getUint8(index + i));
+  const bytes = Uint8Array.from({ length }, (_, i) =>
+    dataView.getUint8(index + i),
+  );
   return decoder.decode(bytes);
 };
 const getCharacterLength = str => {
@@ -78,7 +83,7 @@ const getCharacterLength = str => {
     total++;
   }
   return total;
-}
+};
 
 //    createParserState :: x -> s -> ParserState e a s
 const createParserState = (target, data = null) => {
@@ -99,7 +104,9 @@ const createParserState = (target, data = null) => {
     dataView = target;
     inputType = inputTypes.DATA_VIEW;
   } else {
-    throw new Error(`Cannot process input. Must be a string, ArrayBuffer, TypedArray, or DataView. but got ${typeof target}`);
+    throw new Error(
+      `Cannot process input. Must be a string, ArrayBuffer, TypedArray, or DataView. but got ${typeof target}`,
+    );
   }
 
   return {
@@ -218,7 +225,7 @@ Parser.prototype.errorMap = function Parser$errorMap(fn) {
       fn({
         error: nextState.error,
         index: nextState.index,
-        data: nextState.data
+        data: nextState.data,
       }),
     );
   });
@@ -384,7 +391,7 @@ export const coroutine = function coroutine(g) {
   return new Parser(function coroutine$state(state) {
     const generator = g();
 
-    let nextValue = undefined;
+    let nextValue;
     let nextState = state;
 
     while (true) {
@@ -415,7 +422,9 @@ export const coroutine = function coroutine(g) {
 //           exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
 export const exactly = function exactly(n) {
   if (typeof n !== 'number' || n <= 0) {
-    throw new TypeError (`exactly must be called with a number > 0, but got ${n}`);
+    throw new TypeError(
+      `exactly must be called with a number > 0, but got ${n}`,
+    );
   }
   return function exactly$factory(parser) {
     return new Parser(function exactly$factory$state(state) {
@@ -426,7 +435,7 @@ export const exactly = function exactly(n) {
 
       for (let i = 0; i < n; i++) {
         const out = parser.p(nextState);
-        if(out.isError) {
+        if (out.isError) {
           return out;
         } else {
           nextState = out;
@@ -435,9 +444,15 @@ export const exactly = function exactly(n) {
       }
 
       return updateResult(nextState, results);
-    }).errorMap(({index, error}) => `ParseError (position ${index}): Expecting ${n}${error.replace(reErrorExpectation, '')}`);
-  }
-}
+    }).errorMap(
+      ({ index, error }) =>
+        `ParseError (position ${index}): Expecting ${n}${error.replace(
+          reErrorExpectation,
+          '',
+        )}`,
+    );
+  };
+};
 
 //           many :: Parser e s a -> Parser e s [a]
 export const many = function many(parser) {
@@ -612,7 +627,11 @@ export const regex = function regex(re) {
     if (rest.length >= 1) {
       const match = rest.match(re);
       return match
-        ? updateParserState(state, match[0], index + encoder.encode(match[0]).byteLength)
+        ? updateParserState(
+            state,
+            match[0],
+            index + encoder.encode(match[0]).byteLength,
+          )
         : updateError(
             state,
             `ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(
@@ -655,7 +674,7 @@ export const digit = new Parser(function digit$state(state) {
 
 //           digits :: Parser e String s
 export const digits = regex(reDigits).errorMap(
-  ({index}) => `ParseError (position ${index}): Expecting digits`,
+  ({ index }) => `ParseError (position ${index}): Expecting digits`,
 );
 
 //           letter :: Parser e Char s
@@ -685,7 +704,7 @@ export const letter = new Parser(function letter$state(state) {
 
 //           letters :: Parser e String s
 export const letters = regex(reLetters).errorMap(
-  ({index}) => `ParseError (position ${index}): Expecting letters`,
+  ({ index }) => `ParseError (position ${index}): Expecting letters`,
 );
 
 //           anyOfString :: String -> Parser e Char s
@@ -886,8 +905,10 @@ export const everythingUntil = function everythingUntil(parser) {
 };
 
 //           everyCharUntil :: Parser e a s -> Parser e String s
-export const everyCharUntil = parser => everythingUntil(parser)
-  .map(results => decoder.decode(Uint8Array.from(results)));
+export const everyCharUntil = parser =>
+  everythingUntil(parser).map(results =>
+    decoder.decode(Uint8Array.from(results)),
+  );
 
 //           anythingExcept :: Parser e a s -> Parser e Char s
 export const anythingExcept = function anythingExcept(parser) {
@@ -967,14 +988,32 @@ export const skip = function skip(parser) {
   });
 };
 
+//           startOfInput :: Parser e String s
+export const startOfInput = new Parser(function startOfInput$state(state) {
+  if (state.isError) return state;
+  const { index } = state;
+  if (index > 0) {
+    return updateError(
+      state,
+      `ParseError 'startOfInput' (position ${index}): Expected start of input'`,
+    );
+  }
+
+  return state;
+});
+
 //           endOfInput :: Parser e Null s
 export const endOfInput = new Parser(function endOfInput$state(state) {
   if (state.isError) return state;
   const { dataView, index, inputType } = state;
   if (index !== dataView.byteLength) {
-    const errorByte = inputType === inputTypes.STRING
-      ? String.fromCharCode(dataView.getUint8(index))
-      : `0x${dataView.getUint8(index).toString(16).padStart(2, '0')}`;
+    const errorByte =
+      inputType === inputTypes.STRING
+        ? String.fromCharCode(dataView.getUint8(index))
+        : `0x${dataView
+            .getUint8(index)
+            .toString(16)
+            .padStart(2, '0')}`;
 
     return updateError(
       state,
@@ -989,7 +1028,7 @@ export const endOfInput = new Parser(function endOfInput$state(state) {
 export const whitespace = regex(reWhitespaces)
   // Keeping this error even though the implementation no longer uses many1. Will change it to something more appropriate in the next major release.
   .errorMap(
-    ({index}) =>
+    ({ index }) =>
       `ParseError 'many1' (position ${index}): Expecting to match at least one value`,
   );
 
