@@ -51,7 +51,7 @@ const {
   startOfInput,
   endOfInput,
   withData,
-} = require('../index');
+} = require('../dist/index');
 
 const encoder = new TextEncoder();
 

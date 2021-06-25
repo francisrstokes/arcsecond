@@ -10,8 +10,8 @@ const reLetter = /[a-zA-Z]/;
 const reLetters = /^[a-zA-Z]+/;
 const reWhitespaces = /^\s+/;
 const reErrorExpectation = /ParseError.+Expecting/;
-
-export {encoder, decoder, Parser, ParserState, ResultType, FnReturingParserIterator, Err, Ok, updateData, updateError, updateParserState, updateResult, InputType, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char}
+export type {Parser, ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputType}
+export {encoder, decoder, updateData, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char}
 
 //           getData :: Parser e a s
 export function getData() {
