@@ -23,51 +23,52 @@ type TargetType =
   | Float32Array
   | Float64Array;
 
-export type ParserState<T, E> = {
+export type ParserState<T, E, D> = {
   dataView: DataView;
   inputType: InputType;
   isError: boolean;
   error: E;
-  data: any;
+  data: D;
   index: number;
   result: T;
 }
 
-export type ResultType<T, E> = {
+export type ResultType<T, E, D> = {
   isError: boolean;
   error: E;
   index: number;
   result: T;
+  data: D;
 }
 
-export type StateTransformerFunction<T, E = any> = (state: ParserState<any, any>) => ParserState<T, E>;
+export type StateTransformerFunction<T, E = any, D = null> = (state: ParserState<any>) => ParserState<T, E, D>;
 
-declare class Parser<T, E = string> {
-  constructor(p: StateTransformerFunction<T, E>);
-  run(target: TargetType): ResultType<T, E>;
+declare class Parser<T, E = string, D = null> {
+  constructor(p: StateTransformerFunction<T, E, D>);
+  run(target: TargetType): ResultType<T, E, D>;
   fork<F>(target: TargetType, errorFn: (err: E) => F, successFn: (result: T) => F): F;
   map<T2>(fn: (x: T) => T2): Parser<T2>;
   chain<T2>(fn: (x: T) => Parser<T2>): Parser<T2>;
   ap<T2>(parserOfFunction: Parser<(x: T) => T2>): Parser<T2>;
   errorMap<E2>(fn: (err: E) => E2): Parser<T, E2>;
   errorChain<T2>(fn: (err: E) => Parser<T2>): Parser<T2>;
-  mapFromData(fn: (data: any) => any): Parser<T>;
-  chainFromData<T2>(fn: (data: any) => Parser<T2>): Parser<T2>;
-  mapData(fn: (data: any) => any): Parser<T>;
+  mapFromData<T2>(fn: (data: D) => T2): Parser<T2, E, D>;
+  chainFromData<T2>(fn: (data: D) => Parser<T2>): Parser<T2>;
+  mapData<D2>(fn: (data: D) => D2): Parser<T, E, D2>;
   static of<T>(x: T): Parser<T>;
 }
 
 export type FnReturingParserIterator<T> = () => Iterator<Parser<any>, T>;
 
 declare const getData: Parser<any>;
-declare function setData(data: any): Parser<any>;
-declare function mapData(mapFn: (data: any) => any): Parser<any>;
-declare function withData<T>(parser: Parser<T>): (data: any) => Parser<T>;
+declare function setData<D2>(data: D2): Parser<any, any, D2>;
+declare function mapData<D2>(mapFn: (data: any) => D2): Parser<any, any, D2>;
+declare function withData<T, D>(parser: Parser<T>): (data: D) => Parser<T, any, D>;
 declare function pipeParsers(parsers: Parser<any>[]): Parser<any>;
 declare function composeParsers(parsers: Parser<any>[]): Parser<any>;
-declare function tapParser(fn: (state: ParserState<any, any>) => void): Parser<any, any>;
-declare function parse<T, E>(parser: Parser<T, E>): (target: TargetType) => ResultType<T, E>;
-declare function decide<T>(fn: (state: ParserState<any, any>) => Parser<T>): Parser<T>;
+declare function tapParser(fn: (state: ParserState<any>) => void): Parser<any>;
+declare function parse<T, E, D>(parser: Parser<T, E, D>): (target: TargetType) => ResultType<T, E, D>;
+declare function decide<T>(fn: (state: ParserState<any>) => Parser<T>): Parser<T>;
 declare function fail<E>(errorValue: E): Parser<any, E>;
 declare function succeedWith<T>(value: T): Parser<T>;
 declare function either<T>(parser: Parser<T>): Parser<T>;
@@ -107,5 +108,5 @@ declare const optionalWhitespace: Parser<string>;
 declare function recursiveParser<T>(parserThunk: () => Parser<T>): Parser<T>;
 declare function takeRight<L, R>(left: Parser<L>): (right: Parser<R>) => Parser<R>;
 declare function takeLeft<L, R>(left: Parser<L>): (right: Parser<R>) => Parser<L>;
-declare function toPromise<T, E>(result: ResultType<T, E>): Promise<T>;
-declare function toValue<T, E>(result: ResultType<T, E>): T;
+declare function toPromise<T, E, D>(result: ResultType<T, E, D>): Promise<T>;
+declare function toValue<T, E, D>(result: ResultType<T, E, D>): T;
