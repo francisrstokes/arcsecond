@@ -8,7 +8,7 @@
     "test": "npm run build && jest",
     "test:nobuild": "jest",
     "repl": "node -r esm",
-    "build": "babel index.ts -o index.js"
+    "build": "babel src/index.ts -o index.js"
   },
   "jest": {
     "transform": {}
