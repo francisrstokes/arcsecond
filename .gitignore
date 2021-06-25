@@ -3,3 +3,4 @@ node_modules/
 /index.js
 coverage/
 .vscode
+dist/
