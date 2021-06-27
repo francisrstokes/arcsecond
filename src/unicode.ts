@@ -5,9 +5,9 @@ if (typeof TextEncoder !== 'undefined') {
   text.Decoder = TextDecoder;
 } else {
   try {
-    // const util = import('util');
-    // text.Encoder = util.TextEncoder;
-    // text.Decoder = util.TextDecoder;
+    const util = require('util');
+    text.Encoder = util.TextEncoder;
+    text.Decoder = util.TextDecoder;
   } catch (ex) {
     throw new Error(
       'Arcsecond requires TextEncoder and TextDecoder to be polyfilled.',
@@ -18,17 +18,14 @@ if (typeof TextEncoder !== 'undefined') {
 export const encoder = new text.Encoder();
 export const decoder = new text.Decoder();
 
-export const getString = (
-  index: number,
-  length: number,
-  dataView: DataView,
-) => {
+export const getString = (index: number, length: number, dataView: DataView) => {
   const bytes = Uint8Array.from({ length }, (_, i) =>
-    dataView.getUint8(index + i),
+    dataView.getUint8(index + i)
   );
   const decodedString = decoder.decode(bytes);
   return decodedString;
 };
+
 export const getNextCharWidth = (index: number, dataView: DataView) => {
   const byte = dataView.getUint8(index);
   if ((byte & 0x80) >> 7 === 0) return 1;
@@ -37,16 +34,14 @@ export const getNextCharWidth = (index: number, dataView: DataView) => {
   else if ((byte & 0xf0) >> 4 === 0b1111) return 4;
   return 1;
 };
-export const getUtf8Char = (
-  index: number,
-  length: number,
-  dataView: DataView,
-) => {
+
+export const getUtf8Char = (index: number, length: number, dataView: DataView) => {
   const bytes = Uint8Array.from({ length }, (_, i) =>
     dataView.getUint8(index + i),
   );
   return decoder.decode(bytes);
 };
+
 export const getCharacterLength = (str: string) => {
   let cp;
   let total = 0;

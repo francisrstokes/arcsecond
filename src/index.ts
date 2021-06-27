@@ -1,4 +1,4 @@
-import { decoder, encoder, getCharacterLength, getNextCharWidth, getString, getUtf8Char } from "./endecoder";
+import { decoder, encoder, getCharacterLength, getNextCharWidth, getString, getUtf8Char } from "./unicode";
 import { InputType, InputTypes } from "./inputTypes";
 import { FnReturingParserIterator, Parser, ParserState, Err, Ok, ResultType } from "./parser";
 import { updateData, updateError, updateParserState, updateResult } from "./update";
@@ -10,8 +10,8 @@ const reLetter = /[a-zA-Z]/;
 const reLetters = /^[a-zA-Z]+/;
 const reWhitespaces = /^\s+/;
 const reErrorExpectation = /ParseError.+Expecting/;
-export type {Parser, ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputType}
-export {encoder, decoder, updateData, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char}
+export type { ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputType }
+export { encoder, decoder, updateData, Parser, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char }
 
 //           getData :: Parser e a s
 export function getData() {
@@ -30,7 +30,7 @@ export function setData<D2>(data: D2): Parser<any, any, D2> {
 };
 
 //           mapData :: (s -> t) -> Parser e a t
-export function mapData<D2>(fn: (data: any ) => D2): Parser<any, any, D2> {
+export function mapData<D2>(fn: (data: any) => D2): Parser<any, any, D2> {
   return new Parser(function mapData$state(state) {
     if (state.isError) return state;
     return updateData(state, fn(state.data));
@@ -150,7 +150,7 @@ export function coroutine<T>(g: FnReturingParserIterator<T>): Parser<T> {
 //           exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
 export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
   if (typeof n !== 'number' || n <= 0) {
-    throw new TypeError (`exactly must be called with a number > 0, but got ${n}`);
+    throw new TypeError(`exactly must be called with a number > 0, but got ${n}`);
   }
   return function exactly$factory(parser) {
     return new Parser(function exactly$factory$state(state) {
@@ -161,7 +161,7 @@ export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
 
       for (let i = 0; i < n; i++) {
         const out = parser.p(nextState);
-        if(out.isError) {
+        if (out.isError) {
           return out;
         } else {
           nextState = out;
@@ -170,7 +170,7 @@ export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
       }
 
       return updateResult(nextState, results);
-    }).errorMap(({index, error}) => `ParseError (position ${index}): Expecting ${n}${error.replace(reErrorExpectation, '')}`);
+    }).errorMap(({ index, error }) => `ParseError (position ${index}): Expecting ${n}${error.replace(reErrorExpectation, '')}`);
   }
 }
 
@@ -251,9 +251,9 @@ export const char = function char(c: string): Parser<string> {
         return char === c
           ? updateParserState(state, c, index + charWidth)
           : updateError(
-              state,
-              `ParseError (position ${index}): Expecting character '${c}', got '${char}'`,
-            );
+            state,
+            `ParseError (position ${index}): Expecting character '${c}', got '${char}'`,
+          );
       }
     }
     return updateError(
@@ -320,9 +320,9 @@ export function str(s: string): Parser<string> {
     return s === stringAtIndex
       ? updateParserState(state, s, index + encoder.encode(s).byteLength)
       : updateError(
-          state,
-          `ParseError (position ${index}): Expecting string '${s}', got '${stringAtIndex}...'`,
-        );
+        state,
+        `ParseError (position ${index}): Expecting string '${s}', got '${stringAtIndex}...'`,
+      );
   });
 };
 
@@ -349,12 +349,12 @@ export function regex(re: RegExp): Parser<string> {
       return match
         ? updateParserState(state, match[0], index + encoder.encode(match[0]).byteLength)
         : updateError(
-            state,
-            `ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(
-              0,
-              5,
-            )}...'`,
-          );
+          state,
+          `ParseError (position ${index}): Expecting string matching '${re}', got '${rest.slice(
+            0,
+            5,
+          )}...'`,
+        );
     }
     return updateError(
       state,
@@ -376,9 +376,9 @@ export const digit: Parser<string> = new Parser(function digit$state(state) {
       return dataView.byteLength && char && reDigit.test(char)
         ? updateParserState(state, char, index + charWidth)
         : updateError(
-            state,
-            `ParseError (position ${index}): Expecting digit, got '${char}'`,
-          );
+          state,
+          `ParseError (position ${index}): Expecting digit, got '${char}'`,
+        );
     }
   }
 
@@ -390,7 +390,7 @@ export const digit: Parser<string> = new Parser(function digit$state(state) {
 
 //           digits :: Parser e String s
 export const digits: Parser<string> = regex(reDigits).errorMap(
-  ({index}) => `ParseError (position ${index}): Expecting digits`,
+  ({ index }) => `ParseError (position ${index}): Expecting digits`,
 );
 
 //           letter :: Parser e Char s
@@ -406,9 +406,9 @@ export const letter: Parser<string> = new Parser(function letter$state(state) {
       return dataView.byteLength && char && reLetter.test(char)
         ? updateParserState(state, char, index + charWidth)
         : updateError(
-            state,
-            `ParseError (position ${index}): Expecting letter, got '${char}'`,
-          );
+          state,
+          `ParseError (position ${index}): Expecting letter, got '${char}'`,
+        );
     }
   }
 
@@ -420,7 +420,7 @@ export const letter: Parser<string> = new Parser(function letter$state(state) {
 
 //           letters :: Parser e String s
 export const letters: Parser<string> = regex(reLetters).errorMap(
-  ({index}) => `ParseError (position ${index}): Expecting letters`,
+  ({ index }) => `ParseError (position ${index}): Expecting letters`,
 );
 
 //           anyOfString :: String -> Parser e Char s
@@ -437,9 +437,9 @@ export function anyOfString(s: string): Parser<string> {
         return s.includes(char)
           ? updateParserState(state, char, index + charWidth)
           : updateError(
-              state,
-              `ParseError (position ${index}): Expecting any of the string "${s}", got ${char}`,
-            );
+            state,
+            `ParseError (position ${index}): Expecting any of the string "${s}", got ${char}`,
+          );
       }
     }
 
@@ -559,7 +559,7 @@ export const sepBy1 = function sepBy1<S, T>(sepParser: Parser<S>): (valueParser:
 //           choice :: [Parser * * *] -> Parser * * *
 export const choice = function choice(parsers: Parser<any>[]): Parser<any> {
 
-  if(parsers.length === 0) throw new Error(`List of parsers can't be empty.`)
+  if (parsers.length === 0) throw new Error(`List of parsers can't be empty.`)
 
   return new Parser(function choice$state(state) {
     if (state.isError) return state;
@@ -741,7 +741,7 @@ export const endOfInput: Parser<null> = new Parser(function endOfInput$state(sta
 export const whitespace: Parser<string> = regex(reWhitespaces)
   // Keeping this error even though the implementation no longer uses many1. Will change it to something more appropriate in the next major release.
   .errorMap(
-    ({index}) =>
+    ({ index }) =>
       `ParseError 'many1' (position ${index}): Expecting to match at least one value`,
   );
 
@@ -773,10 +773,10 @@ export const takeLeft = function takeLeft<L, R>(leftParser: Parser<L>) {
 export function toPromise<T, E, D>(result: ResultType<T, E, D>) {
   return result.isError === true
     ? Promise.reject({
-        error: result.error,
-        index: result.index,
-        data: result.data,
-      })
+      error: result.error,
+      index: result.index,
+      data: result.data,
+    })
     : Promise.resolve(result.result);
 };
 
@@ -784,7 +784,7 @@ export function toPromise<T, E, D>(result: ResultType<T, E, D>) {
 export function toValue<T, E, D>(result: ResultType<T, E, D>): T {
   if (result.isError === true) {
     const e = new Error(String(result.error) || 'null') as any;
-    e.parseIndex = result.index; 
+    e.parseIndex = result.index;
     e.data = result.data;
     throw e;
   }

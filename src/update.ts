@@ -1,4 +1,4 @@
-import { ParserState } from "./parser";
+import { ParserState } from './parser';
 
 //    updateError :: (ParserState e a s, f) -> ParserState f a s
 export const updateError = <T, E, D, E2>(state: ParserState<T, E, D>, error: E2): ParserState<T, E2, D> => ({ ...state, isError: true, error });
