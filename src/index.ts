@@ -1,7 +1,6 @@
 import { decoder, encoder, getCharacterLength, getNextCharWidth, getString, getUtf8Char } from "./unicode";
 import { InputType, InputTypes } from "./inputTypes";
-import { FnReturingParserIterator, Parser, ParserState, Err, Ok, ResultType } from "./parser";
-import { updateData, updateError, updateParserState, updateResult } from "./update";
+import { FnReturingParserIterator, Parser, ParserState, Err, Ok, ResultType, updateData, updateError, updateParserState, updateResult } from "./parser";
 
 // Caching compiled regexs for better performance
 const reDigit = /[0-9]/;
