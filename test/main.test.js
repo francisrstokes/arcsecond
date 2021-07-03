@@ -51,7 +51,7 @@ const {
   startOfInput,
   endOfInput,
   withData,
-} = require('../bundle.js');
+} = require('../index.js');
 
 const encoder = new TextEncoder();
 
