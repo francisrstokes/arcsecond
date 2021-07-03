@@ -812,7 +812,7 @@ testMany('withData', [
 test('getData', () => {
   const p = withData(
     coroutine(function*() {
-      const stateData = yield getData();
+      const stateData = yield getData;
       return stateData;
     }),
   );
@@ -846,7 +846,7 @@ testMany('setData', [
   () => {
     const parser = withData(
       coroutine(function*() {
-        const data = yield getData();
+        const data = yield getData;
         yield setData(data.map(x => x * 2));
         return 42;
       }),

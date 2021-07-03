@@ -13,12 +13,10 @@ export type { ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputT
 export { encoder, decoder, updateData, Parser, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char }
 
 // getData :: Parser e a s
-export function getData() {
-  return new Parser(function getData$state(state) {
-    if (state.isError) return state;
-    return updateResult(state, state.data);
-  })
-};
+export const  getData = new Parser(function getData$state(state) {
+  if (state.isError) return state;
+  return updateResult(state, state.data);
+});
 
 // setData :: t -> Parser e a t
 export function setData<D2>(data: D2): Parser<any, any, D2> {
