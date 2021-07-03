@@ -8,7 +8,7 @@
     "test": "npm run build && jest",
     "test:nobuild": "jest",
     "repl": "node -r esm",
-    "build": "rimraf dist && rimraf bundle.js && tsc && rollup -c rollup.config.js"
+    "build": "rimraf index.* && rollup -c rollup.config.js"
   },
   "jest": {
     "transform": {}
@@ -16,7 +16,7 @@
   "author": "Francis Stokes <stokesie14@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^19.0.0",
+    "@rollup/plugin-typescript": "^8.2.1",
     "@types/node": "^15.12.5",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.0",
@@ -26,6 +26,7 @@
     "prettier": "^1.19.1",
     "rimraf": "^2.6.3",
     "rollup": "^2.52.7",
+    "rollup-plugin-dts": "^3.0.2",
     "standard": "^14.3.1",
     "typescript": "^4.3.4"
   }

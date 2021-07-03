@@ -1,19 +1,13 @@
 {
     "compilerOptions": {
       "target": "ESNext",
-      "module": "CommonJS",
+      "module": "ESNext",
       "moduleResolution": "Node",
       "esModuleInterop": false,
       "strict": true,
       "noImplicitAny": true,
-      "sourceMap": true,
       "outDir": "dist",
-      "baseUrl": ".",
-      "paths": {
-        "*": [
-          "node_modules/",
-        ]
-      }
+      "declaration": true
     },
     "include": [
       "src/**/*"

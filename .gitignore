@@ -1,7 +1,6 @@
 node_modules/
 .sketchpad/
-/index.js
+/index.*
 coverage/
 .vscode
 dist/
-bundle.js
