@@ -1,13 +1,11 @@
-const text = { Encoder: TextEncoder, Decoder: TextDecoder };
+let text: {Encoder: typeof TextEncoder, Decoder: typeof TextDecoder}
 
 if (typeof TextEncoder !== 'undefined') {
-  text.Encoder = TextEncoder;
-  text.Decoder = TextDecoder;
+  text = {Encoder: TextEncoder, Decoder: TextDecoder};
 } else {
   try {
     const util = require('util');
-    text.Encoder = util.TextEncoder;
-    text.Decoder = util.TextDecoder;
+    text = {Encoder: util.TextEncoder, Decoder: util.TextDecoder};
   } catch (ex) {
     throw new Error(
       'Arcsecond requires TextEncoder and TextDecoder to be polyfilled.',
