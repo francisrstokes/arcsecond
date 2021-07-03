@@ -8,7 +8,7 @@ export default [
         file: 'index.js',
         format: 'cjs'
     },
-    plugins: [typescript()]
+    plugins: [typescript({target: "ES6"})]
   },
   {
     input: './src/index.ts',
@@ -16,7 +16,7 @@ export default [
         file: 'index.mjs',
         format: 'es'
     },
-    plugins: [typescript()]
+    plugins: [typescript({target: "ES2020"})]
   },
   {
     input: './src/index.ts',
