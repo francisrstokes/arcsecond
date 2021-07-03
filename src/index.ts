@@ -12,7 +12,7 @@ const reErrorExpectation = /ParseError.+Expecting/;
 export type { ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputType }
 export { encoder, decoder, updateData, Parser, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char }
 
-//           getData :: Parser e a s
+// getData :: Parser e a s
 export function getData() {
   return new Parser(function getData$state(state) {
     if (state.isError) return state;
@@ -20,7 +20,7 @@ export function getData() {
   })
 };
 
-//           setData :: t -> Parser e a t
+// setData :: t -> Parser e a t
 export function setData<D2>(data: D2): Parser<any, any, D2> {
   return new Parser(function setData$state(state) {
     if (state.isError) return state;
@@ -28,7 +28,7 @@ export function setData<D2>(data: D2): Parser<any, any, D2> {
   });
 };
 
-//           mapData :: (s -> t) -> Parser e a t
+// mapData :: (s -> t) -> Parser e a t
 export function mapData<D2>(fn: (data: any) => D2): Parser<any, any, D2> {
   return new Parser(function mapData$state(state) {
     if (state.isError) return state;
@@ -36,14 +36,14 @@ export function mapData<D2>(fn: (data: any) => D2): Parser<any, any, D2> {
   });
 };
 
-//           withData :: Parser e a x -> s -> Parser e a s
+// withData :: Parser e a x -> s -> Parser e a s
 export function withData<T, D>(parser: Parser<T, any, any>): (data: D) => Parser<T, any, D> {
   return function withData$stateData(stateData) {
     return setData(stateData).chain(() => parser);
   };
 };
 
-//           pipeParsers :: [Parser * * *] -> Parser * * *
+// pipeParsers :: [Parser * * *] -> Parser * * *
 export function pipeParsers(parsers: Parser<any>[]): Parser<any> {
   return new Parser(function pipeParsers$state(state) {
     let nextState = state;
@@ -54,14 +54,14 @@ export function pipeParsers(parsers: Parser<any>[]): Parser<any> {
   });
 };
 
-//           composeParsers :: [Parser * * *] -> Parser * * *
+// composeParsers :: [Parser * * *] -> Parser * * *
 export const composeParsers = function composeParsers(parsers: Parser<any>[]): Parser<any> {
   return new Parser(function composeParsers$state(state) {
     return pipeParsers([...parsers].reverse()).p(state);
   });
 };
 
-//           tapParser :: (a => ()) -> Parser e a s
+// tapParser :: (a => ()) -> Parser e a s
 export const tapParser = function tapParser(fn: (state: ParserState<any, any, any>) => void): Parser<any> {
   return new Parser(function tapParser$state(state) {
     fn(state);
@@ -69,14 +69,14 @@ export const tapParser = function tapParser(fn: (state: ParserState<any, any, an
   });
 };
 
-//           parse :: Parser e a s -> String -> Either e a
+// parse :: Parser e a s -> String -> Either e a
 export function parse<T, E, D>(parser: Parser<T, E, D>): (target: InputType) => ResultType<T, E, D> {
   return function parse$targetString(target) {
     return parser.run(target);
   };
 };
 
-//           decide :: (a -> Parser e b s) -> Parser e b s
+// decide :: (a -> Parser e b s) -> Parser e b s
 export function decide<T>(fn: (state: ParserState<any, any, any>) => Parser<T>): Parser<T> {
   return new Parser(function decide$state(state) {
     if (state.isError) return state;
@@ -85,7 +85,7 @@ export function decide<T>(fn: (state: ParserState<any, any, any>) => Parser<T>):
   });
 };
 
-//           fail :: e -> Parser e a s
+// fail :: e -> Parser e a s
 export function fail<E>(errorMessage: E) {
   return new Parser<any, E>(function fail$state(state) {
     if (state.isError) return state;
@@ -93,10 +93,10 @@ export function fail<E>(errorMessage: E) {
   });
 };
 
-//           succeedWith :: a -> Parser e a s
+// succeedWith :: a -> Parser e a s
 export const succeedWith = Parser.of;
 
-//           either :: Parser e a s -> Parser e (Either e a) s
+// either :: Parser e a s -> Parser e (Either e a) s
 export function either<T>(parser: Parser<T>): Parser<T> {
   return new Parser(function either$state(state) {
     if (state.isError) return state;
@@ -113,7 +113,7 @@ export function either<T>(parser: Parser<T>): Parser<T> {
   });
 };
 
-//           coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s
+// coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s
 export function coroutine<T>(g: FnReturingParserIterator<T>): Parser<T> {
   return new Parser(function coroutine$state(state) {
     const generator = g();
@@ -146,7 +146,7 @@ export function coroutine<T>(g: FnReturingParserIterator<T>): Parser<T> {
   });
 };
 
-//           exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
+// exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
 export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
   if (typeof n !== 'number' || n <= 0) {
     throw new TypeError(`exactly must be called with a number > 0, but got ${n}`);
@@ -173,7 +173,7 @@ export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
   }
 }
 
-//           many :: Parser e s a -> Parser e s [a]
+// many :: Parser e s a -> Parser e s [a]
 export const many = function many<T>(parser: Parser<T>): Parser<T[]> {
   return new Parser(function many$state(state) {
     if (state.isError) return state;
@@ -200,7 +200,7 @@ export const many = function many<T>(parser: Parser<T>): Parser<T[]> {
   });
 };
 
-//           many1 :: Parser e s a -> Parser e s [a]
+// many1 :: Parser e s a -> Parser e s [a]
 export const many1 = function many1<T>(parser: Parser<T>): Parser<T[]> {
   return new Parser(function many1$state(state) {
     if (state.isError) return state;
@@ -215,7 +215,7 @@ export const many1 = function many1<T>(parser: Parser<T>): Parser<T[]> {
   });
 };
 
-//           mapTo :: (a -> b) -> Parser e b s
+// mapTo :: (a -> b) -> Parser e b s
 export function mapTo<T>(fn: (x: any) => T): Parser<T> {
   return new Parser(function mapTo$state(state) {
     if (state.isError) return state;
@@ -223,7 +223,7 @@ export function mapTo<T>(fn: (x: any) => T): Parser<T> {
   });
 };
 
-//           errorMapTo :: (ParserState e a s -> f) -> Parser f a s
+// errorMapTo :: (ParserState e a s -> f) -> Parser f a s
 export function errorMapTo<E, D>(fn: (error: any, index: number, data: D) => E): Parser<any, E, D> {
   return new Parser(function errorMapTo$state(state) {
     if (!state.isError) return state;
@@ -231,7 +231,7 @@ export function errorMapTo<E, D>(fn: (error: any, index: number, data: D) => E):
   });
 };
 
-//           char :: Char -> Parser e Char s
+// char :: Char -> Parser e Char s
 export const char = function char(c: string): Parser<string> {
   if (!c || getCharacterLength(c) !== 1) {
     throw new TypeError(
@@ -262,7 +262,7 @@ export const char = function char(c: string): Parser<string> {
   });
 };
 
-//           anyChar :: Parser e Char s
+// anyChar :: Parser e Char s
 export const anyChar: Parser<string> = new Parser(function anyChar$state(state) {
   if (state.isError) return state;
 
@@ -280,7 +280,7 @@ export const anyChar: Parser<string> = new Parser(function anyChar$state(state) 
   );
 });
 
-//           peek :: Parser e Char s
+// peek :: Parser e Char s
 export const peek: Parser<number> = new Parser(function peek$state(state) {
   if (state.isError) return state;
 
@@ -294,7 +294,7 @@ export const peek: Parser<number> = new Parser(function peek$state(state) {
   );
 });
 
-//           str :: String -> Parser e String s
+// str :: String -> Parser e String s
 export function str(s: string): Parser<string> {
   if (!s || getCharacterLength(s) < 1) {
     throw new TypeError(
@@ -325,7 +325,7 @@ export function str(s: string): Parser<string> {
   });
 };
 
-//           regex :: RegExp -> Parser e String s
+// regex :: RegExp -> Parser e String s
 export function regex(re: RegExp): Parser<string> {
   const typeofre = Object.prototype.toString.call(re);
   if (typeofre !== '[object RegExp]') {
@@ -362,7 +362,7 @@ export function regex(re: RegExp): Parser<string> {
   });
 };
 
-//           digit :: Parser e String s
+// digit :: Parser e String s
 export const digit: Parser<string> = new Parser(function digit$state(state) {
   if (state.isError) return state;
 
@@ -387,12 +387,12 @@ export const digit: Parser<string> = new Parser(function digit$state(state) {
   );
 });
 
-//           digits :: Parser e String s
+// digits :: Parser e String s
 export const digits: Parser<string> = regex(reDigits).errorMap(
   ({ index }) => `ParseError (position ${index}): Expecting digits`,
 );
 
-//           letter :: Parser e Char s
+// letter :: Parser e Char s
 export const letter: Parser<string> = new Parser(function letter$state(state) {
   if (state.isError) return state;
 
@@ -417,12 +417,12 @@ export const letter: Parser<string> = new Parser(function letter$state(state) {
   );
 });
 
-//           letters :: Parser e String s
+// letters :: Parser e String s
 export const letters: Parser<string> = regex(reLetters).errorMap(
   ({ index }) => `ParseError (position ${index}): Expecting letters`,
 );
 
-//           anyOfString :: String -> Parser e Char s
+// anyOfString :: String -> Parser e Char s
 export function anyOfString(s: string): Parser<string> {
   return new Parser(function anyOfString$state(state) {
     if (state.isError) return state;
@@ -449,7 +449,7 @@ export function anyOfString(s: string): Parser<string> {
   });
 };
 
-//           namedSequenceOf :: [(String, Parser * * *)] -> Parser e (StrMap *) s
+// namedSequenceOf :: [(String, Parser * * *)] -> Parser e (StrMap *) s
 export function namedSequenceOf(pairedParsers: Array<[string, Parser<any>]>): Parser<any[]> {
   return new Parser(function namedSequenceOf$state(state) {
     if (state.isError) return state;
@@ -471,7 +471,7 @@ export function namedSequenceOf(pairedParsers: Array<[string, Parser<any>]>): Pa
   });
 };
 
-//           sequenceOf :: [Parser * * *] -> Parser * [*] *
+// sequenceOf :: [Parser * * *] -> Parser * [*] *
 export function sequenceOf(parsers: Parser<any>[]): Parser<any[]> {
   return new Parser(function sequenceOf$state(state) {
     if (state.isError) return state;
@@ -495,7 +495,7 @@ export function sequenceOf(parsers: Parser<any>[]): Parser<any[]> {
   });
 };
 
-//           sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s
+// sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s
 export function sepBy<S, T>(sepParser: Parser<S>): (valueParser: Parser<T>) => Parser<T[]> {
   return function sepBy$valParser(valueParser) {
     return new Parser(function sepBy$valParser$state(state) {
@@ -536,7 +536,7 @@ export function sepBy<S, T>(sepParser: Parser<S>): (valueParser: Parser<T>) => P
   };
 };
 
-//           sepBy1 :: Parser e a s -> Parser e b s -> Parser e [b] s
+// sepBy1 :: Parser e a s -> Parser e b s -> Parser e [b] s
 export const sepBy1 = function sepBy1<S, T>(sepParser: Parser<S>): (valueParser: Parser<T>) => Parser<T[]> {
   return function sepBy1$valParser(valueParser) {
     return new Parser(function sepBy1$valParser$state(state) {
@@ -555,7 +555,7 @@ export const sepBy1 = function sepBy1<S, T>(sepParser: Parser<S>): (valueParser:
   };
 };
 
-//           choice :: [Parser * * *] -> Parser * * *
+// choice :: [Parser * * *] -> Parser * * *
 export const choice = function choice(parsers: Parser<any>[]): Parser<any> {
 
   if (parsers.length === 0) throw new Error(`List of parsers can't be empty.`)
@@ -578,7 +578,7 @@ export const choice = function choice(parsers: Parser<any>[]): Parser<any> {
   });
 };
 
-//           between :: Parser e a s -> Parser e b s -> Parser e c s -> Parser e b s
+// between :: Parser e a s -> Parser e b s -> Parser e c s -> Parser e b s
 export function between<L, T, R>(leftParser: Parser<L>): (rightParser: Parser<R>) => (parser: Parser<T>) => Parser<T> {
   return function between$rightParser(rightParser) {
     return function between$parser(parser) {
@@ -587,7 +587,7 @@ export function between<L, T, R>(leftParser: Parser<L>): (rightParser: Parser<R>
   };
 };
 
-//           everythingUntil :: Parser e a s -> Parser e String s
+// everythingUntil :: Parser e a s -> Parser e String s
 export function everythingUntil(parser: Parser<any>): Parser<number[]> {
   return new Parser(state => {
     if (state.isError) return state;
@@ -622,11 +622,11 @@ export function everythingUntil(parser: Parser<any>): Parser<number[]> {
   });
 };
 
-//           everyCharUntil :: Parser e a s -> Parser e String s
+// everyCharUntil :: Parser e a s -> Parser e String s
 export const everyCharUntil = (parser: Parser<any>) => everythingUntil(parser)
   .map(results => decoder.decode(Uint8Array.from(results)));
 
-//           anythingExcept :: Parser e a s -> Parser e Char s
+// anythingExcept :: Parser e a s -> Parser e Char s
 export const anythingExcept = function anythingExcept(parser: Parser<any>): Parser<number> {
   return new Parser(function anythingExcept$state(state) {
     if (state.isError) return state;
@@ -644,7 +644,7 @@ export const anythingExcept = function anythingExcept(parser: Parser<any>): Pars
   });
 };
 
-//           anyCharExcept :: Parser e a s -> Parser e Char s
+// anyCharExcept :: Parser e a s -> Parser e Char s
 export const anyCharExcept = function anyCharExcept(parser: Parser<any>): Parser<number> {
   return new Parser(function anyCharExcept$state(state) {
     if (state.isError) return state;
@@ -672,7 +672,7 @@ export const anyCharExcept = function anyCharExcept(parser: Parser<any>): Parser
   });
 };
 
-//           lookAhead :: Parser e a s -> Parser e a s
+// lookAhead :: Parser e a s -> Parser e a s
 export function lookAhead<T>(parser: Parser<T>): Parser<T> {
   return new Parser(function lookAhead$state(state) {
     if (state.isError) return state;
@@ -683,7 +683,7 @@ export function lookAhead<T>(parser: Parser<T>): Parser<T> {
   });
 };
 
-//           possibly :: Parser e a s -> Parser e (a | Null) s
+// possibly :: Parser e a s -> Parser e (a | Null) s
 export function possibly<T>(parser: Parser<T>): Parser<T | null> {
   return new Parser(function possibly$state(state) {
     if (state.isError) return state;
@@ -693,7 +693,7 @@ export function possibly<T>(parser: Parser<T>): Parser<T | null> {
   });
 };
 
-//           skip :: Parser e a s -> Parser e a s
+// skip :: Parser e a s -> Parser e a s
 export function skip(parser: Parser<any>): Parser<null> {
   return new Parser(function skip$state(state) {
     if (state.isError) return state;
@@ -704,7 +704,7 @@ export function skip(parser: Parser<any>): Parser<null> {
   });
 };
 
-//           startOfInput :: Parser e String s
+// startOfInput :: Parser e String s
 export const startOfInput: Parser<null> = new Parser(function startOfInput$state(state) {
   if (state.isError) return state;
   const { index } = state;
@@ -718,7 +718,7 @@ export const startOfInput: Parser<null> = new Parser(function startOfInput$state
   return state;
 });
 
-//           endOfInput :: Parser e Null s
+// endOfInput :: Parser e Null s
 export const endOfInput: Parser<null> = new Parser(function endOfInput$state(state) {
   if (state.isError) return state;
   const { dataView, index, inputType } = state;
@@ -736,7 +736,7 @@ export const endOfInput: Parser<null> = new Parser(function endOfInput$state(sta
   return updateResult(state, null);
 });
 
-//           whitespace :: Parser e String s
+// whitespace :: Parser e String s
 export const whitespace: Parser<string> = regex(reWhitespaces)
   // Keeping this error even though the implementation no longer uses many1. Will change it to something more appropriate in the next major release.
   .errorMap(
@@ -744,31 +744,31 @@ export const whitespace: Parser<string> = regex(reWhitespaces)
       `ParseError 'many1' (position ${index}): Expecting to match at least one value`,
   );
 
-//           optionalWhitespace :: Parser e String s
+// optionalWhitespace :: Parser e String s
 export const optionalWhitespace: Parser<string | null> = possibly(whitespace).map(x => x || '');
 
-//           recursiveParser :: (() => Parser e a s) -> Parser e a s
+// recursiveParser :: (() => Parser e a s) -> Parser e a s
 export function recursiveParser<T>(parserThunk: () => Parser<T>): Parser<T> {
   return new Parser(function recursiveParser$state(state) {
     return parserThunk().p(state);
   });
 };
 
-//           takeRight :: Parser e a s -> Parser f b t -> Parser f b t
+// takeRight :: Parser e a s -> Parser f b t -> Parser f b t
 export function takeRight<L, R>(leftParser: Parser<L>) {
   return function takeRight$rightParser(rightParser: Parser<R>) {
     return leftParser.chain(() => rightParser);
   };
 };
 
-//           takeLeft :: Parser e a s -> Parser f b t -> Parser e a s
+// takeLeft :: Parser e a s -> Parser f b t -> Parser e a s
 export const takeLeft = function takeLeft<L, R>(leftParser: Parser<L>) {
   return function takeLeft$rightParser(rightParser: Parser<R>) {
     return leftParser.chain(x => rightParser.map(() => x));
   };
 };
 
-//           toPromise :: ParserResult e a s -> Promise (e, Integer, s) a
+// toPromise :: ParserResult e a s -> Promise (e, Integer, s) a
 export function toPromise<T, E, D>(result: ResultType<T, E, D>) {
   return result.isError === true
     ? Promise.reject({
@@ -779,7 +779,7 @@ export function toPromise<T, E, D>(result: ResultType<T, E, D>) {
     : Promise.resolve(result.result);
 };
 
-//           toValue :: ParserResult e a s -> a
+// toValue :: ParserResult e a s -> a
 export function toValue<T, E, D>(result: ResultType<T, E, D>): T {
   if (result.isError === true) {
     const e = new Error(String(result.error) || 'null') as any;
