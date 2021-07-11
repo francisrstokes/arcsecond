@@ -1,5 +1,10 @@
 # Release notes
 
+## 4.0.0
+
+- Rewrite the library in TypeScript (still compiled to JS)
+- Includes an official `index.d.ts` file
+
 ## 3.0.0
 
 - Rewrite the internals of the library to use ArrayBuffer and DataView
