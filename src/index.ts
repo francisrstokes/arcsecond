@@ -19,25 +19,25 @@ export const getData = new Parser(function getData$state(state) {
 });
 
 // setData :: t -> Parser e a t
-export function setData<D2>(data: D2): Parser<any, any, D2> {
+export function setData<T, E, D2>(data: D2): Parser<T, E, D2> {
   return new Parser(function setData$state(state) {
     if (state.isError) return state;
-    return updateData(state, data);
+    return updateData<T, E, any, D2>(state, data);
   });
 };
 
 // mapData :: (s -> t) -> Parser e a t
-export function mapData<D2>(fn: (data: any) => D2): Parser<any, any, D2> {
-  return new Parser(function mapData$state(state) {
+export function mapData<T, E, D2>(fn: (data: any) => D2): Parser<T, E, D2> {
+  return new Parser(function mapData$state(state: ParserState<T, E, D2>) {
     if (state.isError) return state;
     return updateData(state, fn(state.data));
   });
 };
 
 // withData :: Parser e a x -> s -> Parser e a s
-export function withData<T, D>(parser: Parser<T, any, any>): (data: D) => Parser<T, any, D> {
+export function withData<T, E, D>(parser: Parser<T, E, any>): (data: D) => Parser<T, E, D> {
   return function withData$stateData(stateData) {
-    return setData(stateData).chain(() => parser);
+    return setData<T, E, any>(stateData).chain(() => parser);
   };
 };
 
