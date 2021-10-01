@@ -126,7 +126,7 @@ export function fail<E>(errorMessage: E) {
 export const succeedWith = Parser.of;
 
 // either :: Parser e a s -> Parser e (Either e a) s
-export function either<T>(parser: Parser<T>): Parser<T> {
+export function either<T>(parser: Parser<T>): Parser<{isError: boolean, value: T}> {
   return new Parser(function either$state(state) {
     if (state.isError) return state;
 
