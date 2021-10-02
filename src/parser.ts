@@ -131,25 +131,25 @@ export class Parser<T, E = string, D = any> {
   }
 
   // map :: Parser e a s ~> (a -> b) -> Parser e b s
-  map<T2>(fn: (x: T) => T2): Parser<T | T2, E, D> {
+  map<T2>(fn: (x: T) => T2): Parser<T2, E, D> {
     const p = this.p;
     return new Parser(function Parser$map$state(
       state,
-    ): ParserState<T | T2, E, D> {
+    ): ParserState<T2, E, D> {
       const newState = p(state);
-      if (newState.isError) return newState;
+      if (newState.isError) return newState as unknown as ParserState<T2, E, D>;
       return updateResult(newState, fn(newState.result));
     });
   }
 
   // chain :: Parser e a s ~> (a -> Parser e b s) -> Parser e b s
-  chain<T2>(fn: (x?: T) => Parser<T2, E, D>): Parser<T | T2, E, D> {
+  chain<T2>(fn: (x?: T) => Parser<T2, E, D>): Parser<T2, E, D> {
     const p = this.p;
     return new Parser(function Parser$chain$state(
       state,
-    ): ParserState<T | T2, E, D> {
+    ): ParserState<T2, E, D> {
       const newState = p(state);
-      if (newState.isError) return newState;
+      if (newState.isError) return newState as unknown as ParserState<T2, E, D>;
       return fn(newState.result).p(newState);
     });
   }
@@ -171,13 +171,13 @@ export class Parser<T, E = string, D = any> {
   }
 
   // errorMap :: Parser e a s ~> (e -> f) -> Parser f a s
-  errorMap<E2>(fn: (error: Err<E, D>) => E2): Parser<T, E | E2, D> {
+  errorMap<E2>(fn: (error: Err<E, D>) => E2): Parser<T, E2, D> {
     const p = this.p;
     return new Parser(function Parser$errorMap$state(
       state,
-    ): ParserState<T, E | E2, D> {
+    ): ParserState<T, E2, D> {
       const nextState = p(state);
-      if (!nextState.isError) return nextState;
+      if (!nextState.isError) return nextState as unknown as ParserState<T, E2, D>;
 
       return updateError(
         nextState,
@@ -192,30 +192,30 @@ export class Parser<T, E = string, D = any> {
   }
 
   // errorChain :: Parser e a s ~> ((e, Integer, s) -> Parser f a s) -> Parser f a s
-  errorChain<T2>(
-    fn: (error: Err<E, D>) => Parser<T2, E, D>,
-  ): Parser<T | T2, E, D> {
+  errorChain<T2, E2>(
+    fn: (error: Err<E, D>) => Parser<T2, E2, D>,
+  ): Parser<T2, E2, D> {
     const p = this.p;
     return new Parser(function Parser$errorChain$state(
       state,
-    ): ParserState<T | T2, E, D> {
+    ): ParserState<T2, E2, D> {
       const nextState = p(state);
       if (nextState.isError) {
         const { error, index, data } = nextState;
         const nextParser = fn({ isError: true, error, index, data });
         return nextParser.p({ ...nextState, isError: false });
       }
-      return nextState;
+      return nextState as unknown as ParserState<T2, E2, D>;
     });
   }
 
   // mapFromData :: Parser e a s ~> (StateData a s -> b) -> Parser e b s
-  mapFromData<T2>(fn: (data: Ok<T, D>) => T2): Parser<T | T2, E, D> {
+  mapFromData<T2>(fn: (data: Ok<T, D>) => T2): Parser<T2, E, D> {
     const p = this.p;
     return new Parser(
-      (state): ParserState<T | T2, E, D> => {
+      (state): ParserState<T2, E, D> => {
         const newState = p(state);
-        if (newState.isError && newState.error) return newState;
+        if (newState.isError && newState.error) return newState as unknown as ParserState<T2, E, D>;
         return updateResult(
           newState,
           fn({
@@ -230,15 +230,15 @@ export class Parser<T, E = string, D = any> {
   }
 
   // chainFromData :: Parser e a s ~> (StateData a s -> Parser f b t) -> Parser f b t
-  chainFromData<T2>(
-    fn: (data: { result: T; data: D }) => Parser<T2, E, D>,
-  ): Parser<T | T2, E, D> {
+  chainFromData<T2, E2>(
+    fn: (data: { result: T; data: D }) => Parser<T2, E2, D>,
+  ): Parser<T2, E2, D> {
     const p = this.p;
     return new Parser(function Parser$chainFromData$state(
       state,
-    ): ParserState<T | T2, E, D> {
+    ): ParserState<T2, E2, D> {
       const newState = p(state);
-      if (newState.isError && newState.error) return newState;
+      if (newState.isError && newState.error) return newState as unknown as ParserState<T2, E2, D>;
       return fn({ result: newState.result, data: newState.data }).p(newState);
     });
   }

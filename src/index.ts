@@ -13,35 +13,51 @@ export type { ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputT
 export { encoder, decoder, updateData, Parser, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char }
 
 // getData :: Parser e a s
-export const  getData = new Parser(function getData$state(state) {
+export const getData = new Parser(function getData$state(state) {
   if (state.isError) return state;
   return updateResult(state, state.data);
 });
 
 // setData :: t -> Parser e a t
-export function setData<D2>(data: D2): Parser<any, any, D2> {
+export function setData<T, E, D2>(data: D2): Parser<T, E, D2> {
   return new Parser(function setData$state(state) {
     if (state.isError) return state;
-    return updateData(state, data);
+    return updateData<T, E, any, D2>(state, data);
   });
 };
 
 // mapData :: (s -> t) -> Parser e a t
-export function mapData<D2>(fn: (data: any) => D2): Parser<any, any, D2> {
-  return new Parser(function mapData$state(state) {
+export function mapData<T, E, D2>(fn: (data: any) => D2): Parser<T, E, D2> {
+  return new Parser(function mapData$state(state: ParserState<T, E, D2>) {
     if (state.isError) return state;
     return updateData(state, fn(state.data));
   });
 };
 
 // withData :: Parser e a x -> s -> Parser e a s
-export function withData<T, D>(parser: Parser<T, any, any>): (data: D) => Parser<T, any, D> {
+export function withData<T, E, D>(parser: Parser<T, E, any>): (data: D) => Parser<T, E, D> {
   return function withData$stateData(stateData) {
-    return setData(stateData).chain(() => parser);
+    return setData<T, E, any>(stateData).chain(() => parser);
   };
 };
 
 // pipeParsers :: [Parser * * *] -> Parser * * *
+export function pipeParsers<A>([p1]: [Parser<A>]): Parser<A>;
+export function pipeParsers<A, B>([p1, p2]: [Parser<A>, Parser<B>]): Parser<B>;
+export function pipeParsers<A, B, C>([p1, p2, p3]: [Parser<A>, Parser<B>, Parser<C>]): Parser<C>;
+export function pipeParsers<A, B, C, D>([p1, p2, p3, p4]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>]): Parser<D>;
+export function pipeParsers<A, B, C, D, E>([p1, p2, p3, p4, p5]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>]): Parser<E>;
+export function pipeParsers<A, B, C, D, E, F>([p1, p2, p3, p4, p5, p6]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>]): Parser<F>;
+export function pipeParsers<A, B, C, D, E, F, G>([p1, p2, p3, p4, p5, p6, p7]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>]): Parser<G>;
+export function pipeParsers<A, B, C, D, E, F, G, H>([p1, p2, p3, p4, p5, p6, p7, p8]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>]): Parser<H>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I>([p1, p2, p3, p4, p5, p6, p7, p8, p9]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>]): Parser<I>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>]): Parser<J>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J, K>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>]): Parser<K>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J, K, L>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>]): Parser<L>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>]): Parser<M>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M, N>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>]): Parser<N>;
+export function pipeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>, Parser<O>]): Parser<O>;
+export function pipeParsers(parsers: Parser<any>[]): Parser<any>;
 export function pipeParsers(parsers: Parser<any>[]): Parser<any> {
   return new Parser(function pipeParsers$state(state) {
     let nextState = state;
@@ -53,14 +69,29 @@ export function pipeParsers(parsers: Parser<any>[]): Parser<any> {
 };
 
 // composeParsers :: [Parser * * *] -> Parser * * *
-export const composeParsers = function composeParsers(parsers: Parser<any>[]): Parser<any> {
+export function composeParsers<A, B>([p1, p2]: [Parser<A>, Parser<B>]): Parser<A>;
+export function composeParsers<A, B, C>([p1, p2, p3]: [Parser<A>, Parser<B>, Parser<C>]): Parser<A>;
+export function composeParsers<A, B, C, D>([p1, p2, p3, p4]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>]): Parser<A>;
+export function composeParsers<A, B, C, D, E>([p1, p2, p3, p4, p5]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F>([p1, p2, p3, p4, p5, p6]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G>([p1, p2, p3, p4, p5, p6, p7]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H>([p1, p2, p3, p4, p5, p6, p7, p8]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I>([p1, p2, p3, p4, p5, p6, p7, p8, p9]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J, K>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J, K, L>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M, N>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>]): Parser<A>;
+export function composeParsers<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>, Parser<O>]): Parser<A>;
+export function composeParsers(parsers: Parser<any>[]): Parser<any>;
+export function composeParsers(parsers: Parser<any>[]): Parser<any> {
   return new Parser(function composeParsers$state(state) {
     return pipeParsers([...parsers].reverse()).p(state);
   });
 };
 
 // tapParser :: (a => ()) -> Parser e a s
-export const tapParser = function tapParser(fn: (state: ParserState<any, any, any>) => void): Parser<any> {
+export function tapParser<T, E, D>(fn: (state: ParserState<T, E, D>) => void): Parser<T, E, D> {
   return new Parser(function tapParser$state(state) {
     fn(state);
     return state;
@@ -75,7 +106,7 @@ export function parse<T, E, D>(parser: Parser<T, E, D>): (target: InputType) => 
 };
 
 // decide :: (a -> Parser e b s) -> Parser e b s
-export function decide<T>(fn: (state: ParserState<any, any, any>) => Parser<T>): Parser<T> {
+export function decide<T, T2, E2, D2>(fn: (value: T) => Parser<T2, E2, D2>): Parser<T2, E2, D2> {
   return new Parser(function decide$state(state) {
     if (state.isError) return state;
     const parser = fn(state.result);
@@ -84,8 +115,8 @@ export function decide<T>(fn: (state: ParserState<any, any, any>) => Parser<T>):
 };
 
 // fail :: e -> Parser e a s
-export function fail<E>(errorMessage: E) {
-  return new Parser<any, E>(function fail$state(state) {
+export function fail<E, D>(errorMessage: E) {
+  return new Parser<any, E, D>(function fail$state(state) {
     if (state.isError) return state;
     return updateError(state, errorMessage);
   });
@@ -95,7 +126,7 @@ export function fail<E>(errorMessage: E) {
 export const succeedWith = Parser.of;
 
 // either :: Parser e a s -> Parser e (Either e a) s
-export function either<T>(parser: Parser<T>): Parser<T> {
+export function either<T>(parser: Parser<T>): Parser<{isError: boolean, value: T}> {
   return new Parser(function either$state(state) {
     if (state.isError) return state;
 
@@ -145,6 +176,22 @@ export function coroutine<T>(g: FnReturingParserIterator<T>): Parser<T> {
 };
 
 // exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]
+export function exactly<T, N extends 1>(n: N): (p: Parser<T>) => Parser<[T]>;
+export function exactly<T, N extends 2>(n: N): (p: Parser<T>) => Parser<[T, T]>;
+export function exactly<T, N extends 3>(n: N): (p: Parser<T>) => Parser<[T, T, T]>;
+export function exactly<T, N extends 4>(n: N): (p: Parser<T>) => Parser<[T, T, T, T]>;
+export function exactly<T, N extends 5>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T]>;
+export function exactly<T, N extends 6>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T]>;
+export function exactly<T, N extends 7>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 8>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 9>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 10>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 11>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 12>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 13>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 14>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T, N extends 15>(n: N): (p: Parser<T>) => Parser<[T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]>;
+export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]>;
 export function exactly<T>(n: number): (p: Parser<T>) => Parser<T[]> {
   if (typeof n !== 'number' || n <= 0) {
     throw new TypeError(`exactly must be called with a number > 0, but got ${n}`);
@@ -222,7 +269,7 @@ export function mapTo<T>(fn: (x: any) => T): Parser<T> {
 };
 
 // errorMapTo :: (ParserState e a s -> f) -> Parser f a s
-export function errorMapTo<E, D>(fn: (error: any, index: number, data: D) => E): Parser<any, E, D> {
+export function errorMapTo<E, E2, D>(fn: (error: E, index: number, data: D) => E2): Parser<any, E, D> {
   return new Parser(function errorMapTo$state(state) {
     if (!state.isError) return state;
     return updateError(state, fn(state.error, state.index, state.data));
@@ -470,6 +517,22 @@ export function namedSequenceOf(pairedParsers: Array<[string, Parser<any>]>): Pa
 };
 
 // sequenceOf :: [Parser * * *] -> Parser * [*] *
+export function sequenceOf<A>([p1]: [Parser<A>]): Parser<[A]>;
+export function sequenceOf<A, B>([p1, p2]: [Parser<A>, Parser<B>]): Parser<[A, B]>;
+export function sequenceOf<A, B, C>([p1, p2, p3]: [Parser<A>, Parser<B>, Parser<C>]): Parser<[A, B, C]>;
+export function sequenceOf<A, B, C, D>([p1, p2, p3, p4]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>]): Parser<[A, B, C, D]>;
+export function sequenceOf<A, B, C, D, E>([p1, p2, p3, p4, p5]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>]): Parser<[A, B, C, D, E]>;
+export function sequenceOf<A, B, C, D, E, F>([p1, p2, p3, p4, p5, p6]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>]): Parser<[A, B, C, D, E, F]>;
+export function sequenceOf<A, B, C, D, E, F, G>([p1, p2, p3, p4, p5, p6, p7]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>]): Parser<[A, B, C, D, E, F, G]>;
+export function sequenceOf<A, B, C, D, E, F, G, H>([p1, p2, p3, p4, p5, p6, p7, p8]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>]): Parser<[A, B, C, D, E, F, G, H]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I>([p1, p2, p3, p4, p5, p6, p7, p8, p9]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>]): Parser<[A, B, C, D, E, F, G, H, I]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>]): Parser<[A, B, C, D, E, F, G, H, I, J]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J, K>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>]): Parser<[A, B, C, D, E, F, G, H, I, J, K]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J, K, L>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>]): Parser<[A, B, C, D, E, F, G, H, I, J, K, L]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J, K, L, M>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>]): Parser<[A, B, C, D, E, F, G, H, I, J, K, L, M]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J, K, L, M, N>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>]): Parser<[A, B, C, D, E, F, G, H, I, J, K, L, M, N]>;
+export function sequenceOf<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>, Parser<O>]): Parser<[A, B, C, D, E, F, G, H, I, J, K, L, M, N, O]>;
+export function sequenceOf(parsers: Parser<any>[]): Parser<any[]>;
 export function sequenceOf(parsers: Parser<any>[]): Parser<any[]> {
   return new Parser(function sequenceOf$state(state) {
     if (state.isError) return state;
@@ -494,14 +557,14 @@ export function sequenceOf(parsers: Parser<any>[]): Parser<any[]> {
 };
 
 // sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s
-export function sepBy<S, T>(sepParser: Parser<S>): (valueParser: Parser<T>) => Parser<T[]> {
+export function sepBy<S, T, E, D>(sepParser: Parser<S, E, D>): (valueParser: Parser<T, E, D>) => Parser<T[]> {
   return function sepBy$valParser(valueParser) {
-    return new Parser(function sepBy$valParser$state(state) {
+    return new Parser<T[]>(function sepBy$valParser$state(state) {
       if (state.isError) return state;
 
-      let nextState = state;
+      let nextState: ParserState<S | T, E, D> = state;
       let error = null;
-      const results = [];
+      const results: T[] = [];
 
       while (true) {
         const valState = valueParser.p(nextState);
@@ -524,7 +587,7 @@ export function sepBy<S, T>(sepParser: Parser<S>): (valueParser: Parser<T>) => P
 
       if (error) {
         if (results.length === 0) {
-          return updateResult(state, results);
+          return updateResult(state, results) as ParserState<T[], E, D>;
         }
         return error;
       }
@@ -554,7 +617,23 @@ export const sepBy1 = function sepBy1<S, T>(sepParser: Parser<S>): (valueParser:
 };
 
 // choice :: [Parser * * *] -> Parser * * *
-export const choice = function choice(parsers: Parser<any>[]): Parser<any> {
+export function choice<A>([p1]: [Parser<A>]): Parser<A>;
+export function choice<A, B>([p1, p2]: [Parser<A>, Parser<B>]): Parser<A | B>;
+export function choice<A, B, C>([p1, p2, p3]: [Parser<A>, Parser<B>, Parser<C>]): Parser<A | B | C>;
+export function choice<A, B, C, D>([p1, p2, p3, p4]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>]): Parser<A | B | C | D>;
+export function choice<A, B, C, D, E>([p1, p2, p3, p4, p5]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>]): Parser<A | B | C | D | E>;
+export function choice<A, B, C, D, E, F>([p1, p2, p3, p4, p5, p6]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>]): Parser<A | B | C | D | E | F>;
+export function choice<A, B, C, D, E, F, G>([p1, p2, p3, p4, p5, p6, p7]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>]): Parser<A | B | C | D | E | F | G>;
+export function choice<A, B, C, D, E, F, G, H>([p1, p2, p3, p4, p5, p6, p7, p8]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>]): Parser<A | B | C | D | E | F | G | H>;
+export function choice<A, B, C, D, E, F, G, H, I>([p1, p2, p3, p4, p5, p6, p7, p8, p9]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>]): Parser<A | B | C | D | E | F | G | H | I>;
+export function choice<A, B, C, D, E, F, G, H, I, J>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>]): Parser<A | B | C | D | E | F | G | H | I | J>;
+export function choice<A, B, C, D, E, F, G, H, I, J, K>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>]): Parser<A | B | C | D | E | F | G | H | I | J | K>;
+export function choice<A, B, C, D, E, F, G, H, I, J, K, L>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>]): Parser<A | B | C | D | E | F | G | H | I | J | K | L>;
+export function choice<A, B, C, D, E, F, G, H, I, J, K, L, M>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>]): Parser<A | B | C | D | E | F | G | H | I | J | K | L | M>;
+export function choice<A, B, C, D, E, F, G, H, I, J, K, L, M, N>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>]): Parser<A | B | C | D | E | F | G | H | I | J | K | L | M | N>;
+export function choice<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>([p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15]: [Parser<A>, Parser<B>, Parser<C>, Parser<D>, Parser<E>, Parser<F>, Parser<G>, Parser<H>, Parser<I>, Parser<J>, Parser<K>, Parser<L>, Parser<M>, Parser<N>, Parser<O>]): Parser<A | B | C | D | E | F | G | H | I | J | K | L | M | N | O>;
+export function choice(parsers: Parser<any>[]): Parser<any>;
+export function choice(parsers: Parser<any>[]): Parser<any> {
 
   if (parsers.length === 0) throw new Error(`List of parsers can't be empty.`)
 
@@ -671,7 +750,7 @@ export const anyCharExcept = function anyCharExcept(parser: Parser<any>): Parser
 };
 
 // lookAhead :: Parser e a s -> Parser e a s
-export function lookAhead<T>(parser: Parser<T>): Parser<T> {
+export function lookAhead<T, E, D>(parser: Parser<T, E, D>): Parser<T, E, D> {
   return new Parser(function lookAhead$state(state) {
     if (state.isError) return state;
     const nextState = parser.p(state);
@@ -682,7 +761,7 @@ export function lookAhead<T>(parser: Parser<T>): Parser<T> {
 };
 
 // possibly :: Parser e a s -> Parser e (a | Null) s
-export function possibly<T>(parser: Parser<T>): Parser<T | null> {
+export function possibly<T, E, D>(parser: Parser<T, E, D>): Parser<T | null, E, D> {
   return new Parser(function possibly$state(state) {
     if (state.isError) return state;
 
@@ -692,7 +771,7 @@ export function possibly<T>(parser: Parser<T>): Parser<T | null> {
 };
 
 // skip :: Parser e a s -> Parser e a s
-export function skip(parser: Parser<any>): Parser<null> {
+export function skip<E, D>(parser: Parser<any, E, D>): Parser<null, E, D> {
   return new Parser(function skip$state(state) {
     if (state.isError) return state;
     const nextState = parser.p(state);
@@ -703,7 +782,7 @@ export function skip(parser: Parser<any>): Parser<null> {
 };
 
 // startOfInput :: Parser e String s
-export const startOfInput: Parser<null> = new Parser(function startOfInput$state(state) {
+export const startOfInput = new Parser<null, string>(function startOfInput$state(state) {
   if (state.isError) return state;
   const { index } = state;
   if (index > 0) {
@@ -717,7 +796,7 @@ export const startOfInput: Parser<null> = new Parser(function startOfInput$state
 });
 
 // endOfInput :: Parser e Null s
-export const endOfInput: Parser<null> = new Parser(function endOfInput$state(state) {
+export const endOfInput = new Parser<null, string>(function endOfInput$state(state) {
   if (state.isError) return state;
   const { dataView, index, inputType } = state;
   if (index !== dataView.byteLength) {
@@ -746,7 +825,7 @@ export const whitespace: Parser<string> = regex(reWhitespaces)
 export const optionalWhitespace: Parser<string | null> = possibly(whitespace).map(x => x || '');
 
 // recursiveParser :: (() => Parser e a s) -> Parser e a s
-export function recursiveParser<T>(parserThunk: () => Parser<T>): Parser<T> {
+export function recursiveParser<T, E, D>(parserThunk: () => Parser<T, E, D>): Parser<T, E, D> {
   return new Parser(function recursiveParser$state(state) {
     return parserThunk().p(state);
   });
