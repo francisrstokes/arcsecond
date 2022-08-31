@@ -154,17 +154,15 @@ const {
 // - ten minutes
 // - nine hours
 // - four days
-const pluralTime = coroutine(function* () {
-  const pluralQuantifier = yield letters;
-  yield char(' ');
-  const timeQuantifier = yield choice([
+const pluralTime = sequenceOf([
+  letters,
+  char(' '),
+  choice([
     str('hours'),
     str('days'),
     str('weeks')
-  ]);
-
-  return `${pluralQuantifier} ${timeQuantifier}`;
-});
+  ])
+]).map(strings => strings.join(''));
 
 const complexTimeString = sequenceOf([
   choice([
