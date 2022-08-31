@@ -195,7 +195,7 @@ fullParser.run('Weather (three hours ago): Cloudy').result
 //  -> { time: 'three hours ago', weather: 'Cloudy' }
 ```
 
-Now we can handle more complex time strings. Notice that in the `complexTimeString` parser, it is just as expressive to use `sequenceOf` and `.map`, as opposed to a `coroutine`.
+Now we can handle more complex time strings. Notice that the `pluralTime` parser and the `complexTimeString` parser both return the matches as concatenated string. In this simple case, using a simple parser with .sequenceOf and .map is just as expressive as a coroutine.
 
 ### Limitations
 
