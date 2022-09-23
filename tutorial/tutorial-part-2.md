@@ -40,17 +40,17 @@ Here the parser is extremely simple; it uses the `letters` parser to capture any
 
 ## Coroutines
 
-The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a scanner function which provides tokenizer function as argument, and allows parsing data using the tokenizer function.
+The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a scanner function which provides \_yield function as argument, and allows parsing data using the \_yield function.
 
 ```javascript
 const { letters, coroutine, char } = require('arcsecond');
 
-const fullParser = coroutine(tokenizer => {
-  const firstWord = tokenizer(letters);
+const fullParser = coroutine(_yield => {
+  const firstWord = _yield(letters);
 
-  tokenizer(char(' '));
+  _yield(char(' '));
 
-  const secondWord = tokenizer(letters);
+  const secondWord = _yield(letters);
 
   return {
     type: 'word list',
@@ -78,36 +78,36 @@ const {
 
 const weatherString = str('Weather');
 
-const timeString = coroutine(tokenizer => {
+const timeString = coroutine(_yield => {
   // Parse and ignore '('
-  tokenizer(char('('));
+  _yield(char('('));
 
   // Parse and store the time string
-  const time = tokenizer(
+  const time = _yield(
     choice([str('today'), str('yesterday'), str('one week ago')]),
   );
 
   // Parse and ignore ')'
-  tokenizer(char(')'));
+  _yield(char(')'));
 
   return time;
 });
 
 const weatherType = choice([str('Sunny'), str('Cloudy'), str('Rainy')]);
 
-const fullParser = coroutine(tokenizer => {
+const fullParser = coroutine(_yield => {
   // Parse the weather string and the space character
-  tokenizer(weatherString);
-  tokenizer(char(' '));
+  _yield(weatherString);
+  _yield(char(' '));
 
   // Store the time string for later
-  const time = tokenizer(timeString);
+  const time = _yield(timeString);
 
   // Parse and ignore the separator
-  tokenizer(str(': '));
+  _yield(str(': '));
 
   // Store the weather string
-  const weather = tokenizer(weatherType);
+  const weather = _yield(weatherType);
 
   // Return the data in a structured way
   return {
@@ -139,10 +139,10 @@ const {
 // - ten minutes
 // - nine hours
 // - four days
-const pluralTime = coroutine(tokenizer => {
-  const pluralQuantifier = tokenizer(letters);
-  tokenizer(char(' '));
-  const timeQuantifier = tokenizer(
+const pluralTime = coroutine(_yield => {
+  const pluralQuantifier = _yield(letters);
+  _yield(char(' '));
+  const timeQuantifier = _yield(
     choice([str('hours'), str('days'), str('weeks')]),
   );
 
@@ -154,14 +154,14 @@ const complexTimeString = sequenceOf([
   str(' ago'),
 ]).map(strings => strings.join(''));
 
-const timeString = coroutine(tokenizer => {
-  tokenizer(char('('));
+const timeString = coroutine(_yield => {
+  _yield(char('('));
 
-  const time = tokenizer(
+  const time = _yield(
     choice([str('today'), str('yesterday'), complexTimeString]),
   );
 
-  tokenizer(char(')'));
+  _yield(char(')'));
 
   return time;
 });

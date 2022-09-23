@@ -142,28 +142,31 @@ export function either<T>(parser: Parser<T>): Parser<{isError: boolean, value: T
   });
 };
 
-// coroutine :: (() -> e) -> Parser e a s
-export function coroutine<T>(scanner: (tokenizer:<K>(parser:Parser<K>)=>K)=>T): Parser<T> {
+type ParserFn<T> = (_yield:<K>(parser:Parser<K>)=>K)=>T;
+
+export function coroutine<T>(parserFn: ParserFn<T>): Parser<T> {
   return new Parser(function coroutine$state(state) {
     let currentValue;
     let currentState = state;
-
-    const tokenizer = <T>(parser: Parser<T>) => {
+    
+    const _yield = <T>(parser: Parser<T>) => {
       if (!(parser && parser instanceof Parser)) {
         throw new Error(
-          `[coroutine] yielded values must be Parsers, got ${parser}.`,
+          `[coroutine] passed values must be Parsers, got ${parser}.`,
         );
       }
-      currentState = parser.p(currentState);
+      const newState = parser.p(currentState);
       if (currentState.isError) {
         throw currentState;
+      } else {
+        currentState = newState;
       }
       currentValue = currentState.result;
       return currentValue;
     }
 
     try {
-      const result = scanner(tokenizer);
+      const result = parserFn(_yield);
       return updateResult(currentState,result);
     } catch (e) {
       if (e instanceof Error) {

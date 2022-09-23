@@ -135,16 +135,16 @@ const {
   char,
 } = require('arcsecond');
 
-const fullParser = coroutine(tokenizer => {
-  tokenizer(str('Hello'));
-  tokenizer(possibly(char(',')));
-  tokenizer(char(' '));
+const fullParser = coroutine(_yield => {
+  _yield(str('Hello'));
+  _yield(possibly(char(',')));
+  _yield(char(' '));
 
-  const name = tokenizer(either(letters));
+  const name = _yield(either(letters));
 
   if (name.isError) {
     // Instead of a cryptic message about where parsing went wrong, we can instead make a better message
-    tokenizer(fail('Names must be made of alphabet characters'));
+    _yield(fail('Names must be made of alphabet characters'));
   }
 
   return name.value;
