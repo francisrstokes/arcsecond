@@ -149,13 +149,12 @@ export function coroutine<T>(scanner: (tokenizer:<K>(parser:Parser<K>)=>K)=>T): 
     let currentState = state;
 
     const tokenizer = <T>(parser: Parser<T>) => {
-      const value = parser;
-      if (!(value && value instanceof Parser)) {
+      if (!(parser && parser instanceof Parser)) {
         throw new Error(
-          `[coroutine] yielded values must be Parsers, got ${value}.`,
+          `[coroutine] yielded values must be Parsers, got ${parser}.`,
         );
       }
-      currentState = value.p(currentState);
+      currentState = parser.p(currentState);
       if (currentState.isError) {
         throw currentState;
       }
