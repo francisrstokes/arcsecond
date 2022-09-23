@@ -156,8 +156,8 @@ export function coroutine<T>(parserFn: ParserFn<T>): Parser<T> {
         );
       }
       const newState = parser.p(currentState);
-      if (currentState.isError) {
-        throw currentState;
+      if (newState.isError) {
+        throw newState;
       } else {
         currentState = newState;
       }
