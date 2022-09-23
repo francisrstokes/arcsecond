@@ -22,7 +22,7 @@
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-prettier": "^3.1.2",
     "esm": "^3.2.25",
-    "jest": "^24.8.0",
+    "jest": "^29.0.3",
     "prettier": "^1.19.1",
     "rimraf": "^2.6.3",
     "rollup": "^2.52.7",
