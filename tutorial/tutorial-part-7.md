@@ -6,9 +6,9 @@
 
 This section could be considered an advanced topic because for many applications of parsing it is not needed. That said, sometimes you simply have to create and keep track of some state while parsing certain kinds of data.
 
-Lets take the JavaScript language for example. JavaScript has several kinds of [expressions](https://en.wikipedia.org/wiki/Expression_(computer_science)) that can only be used in a particular context. Two examples of this are `await` expressions in async functions, and `yield` expressions in generator functions.
+Lets take the JavaScript language for example. JavaScript has several kinds of [expressions](<https://en.wikipedia.org/wiki/Expression_(computer_science)>) that can only be used in a particular context. Two examples of this are `await` expressions in async functions, and `yield` expressions in generator functions.
 
-Then there is the idea of user facing errors. When you write a parser, you want the end users of that parser to be able to understand what happened when something goes wrong. Of course, arcsecond provides errors with indexes into string which point out exactly where things went wrong, these are not specific to *your* parser; In other words, they have no context.
+Then there is the idea of user facing errors. When you write a parser, you want the end users of that parser to be able to understand what happened when something goes wrong. Of course, arcsecond provides errors with indexes into string which point out exactly where things went wrong, these are not specific to _your_ parser; In other words, they have no context.
 
 This is where state comes in. arcsecond has a state management mechanism built in, which is completely [pure](https://en.wikipedia.org/wiki/Pure_function) - which is to say that the side effects are pushed to the very edge of the program (runtime), and there is no mutable global state.
 
@@ -23,37 +23,36 @@ const {
   letters,
   getData,
   mapData,
-  withData
+  withData,
 } = require('arcsecond');
 
-const nameParser = coroutine(function* () {
-  const name = yield letters;
-  yield char(' ');
+const nameParser = coroutine(tokenizer => {
+  const name = tokenizer(letters);
+  tokenizer(char(' '));
 
-  yield mapData(data => {
-    return {
-      ...data,
-      nameBeginsWithA: name[0] === 'A'
-    }
-  });
+  tokenizer(
+    mapData(data => {
+      return {
+        ...data,
+        nameBeginsWithA: name[0] === 'A',
+      };
+    }),
+  );
 
   return name;
 });
 
-const parserBasedOnState = coroutine(function* () {
-  const stateData = yield getData;
+const parserBasedOnState = coroutine(tokenizer => {
+  const stateData = tokenizer(getData);
 
   const stateBasedProperty = stateData.nameBeginsWithA
-    ? yield digits.errorMap(() => 'Expecting a number')
-    : yield letters.errorMap(() => 'Expecting a string');
+    ? tokenizer(digits.errorMap(() => 'Expecting a number'))
+    : tokenizer(letters.errorMap(() => 'Expecting a string'));
 
   return stateBasedProperty;
 });
 
-const fullParser = withData(sequenceOf([
-  nameParser,
-  parserBasedOnState
-]));
+const fullParser = withData(sequenceOf([nameParser, parserBasedOnState]));
 
 fullParser({}).run('Anthony 12345');
 // -> {
@@ -105,14 +104,15 @@ const {
   digits,
   letters,
   mapData,
-  withData
+  withData,
 } = require('arcsecond');
 
-const gotoStage = stageName => mapData(data => ({...data, stage: stageName}));
-const tagWithStage = parser => parser.mapFromData(({data, result}) => ({
-  stage: data.stage,
-  value: result
-}));
+const gotoStage = stageName => mapData(data => ({ ...data, stage: stageName }));
+const tagWithStage = parser =>
+  parser.mapFromData(({ data, result }) => ({
+    stage: data.stage,
+    value: result,
+  }));
 
 const nullify = parser => parser.map(() => null);
 
@@ -120,18 +120,19 @@ const name = tagWithStage(letters);
 const age = tagWithStage(digits);
 const favouriteIceCream = tagWithStage(letters);
 
+const finalParser = withData(
+  sequenceOf([
+    name,
+    nullify(gotoStage('Stage_2')),
+    nullify(char(' ')),
+    age,
+    nullify(gotoStage('Stage_3')),
+    nullify(char(' ')),
+    favouriteIceCream,
+  ]).map(values => values.filter(x => x !== null)),
+);
 
-const finalParser = withData(sequenceOf([
-  name,
-  nullify(gotoStage('Stage_2')),
-  nullify(char(' ')),
-  age,
-  nullify(gotoStage('Stage_3')),
-  nullify(char(' ')),
-  favouriteIceCream
-]).map(values => values.filter(x => x !== null)));
-
-finalParser({ stage: 'Initial_Stage' }).run('Jimmy 22 Chocolate')
+finalParser({ stage: 'Initial_Stage' }).run('Jimmy 22 Chocolate');
 // -> {
 //      isError: false,
 //      result: [
@@ -146,7 +147,7 @@ finalParser({ stage: 'Initial_Stage' }).run('Jimmy 22 Chocolate')
 
 ## Summary
 
-arcsecond provides special "parsers" that allow reading/writing to internal *state data*. This data can be be used to make decisions, produce better error messages, and tag, annotate, or augment data as it is being parsed.
+arcsecond provides special "parsers" that allow reading/writing to internal _state data_. This data can be be used to make decisions, produce better error messages, and tag, annotate, or augment data as it is being parsed.
 
 ## End of tutorial
 
