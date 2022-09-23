@@ -1,5 +1,10 @@
 # Release notes
 
+## 5.0.0
+
+- Refactor the `coroutine` function in order to improve type inference
+- Remove Hindley-Milner type signatures from the readme
+
 ## 4.0.0
 
 - Rewrite the library in TypeScript (still compiled to JS)
