@@ -40,7 +40,7 @@ Here the parser is extremely simple; it uses the `letters` parser to capture any
 
 ## Coroutines
 
-The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a parserFn function which provides `run` function as argument, and allows parsing data using the \run function.
+The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a parserFn function which provides `run` function as argument, and allows parsing data using the `run` function.
 
 ```javascript
 const { letters, coroutine, char } = require('arcsecond');
@@ -62,7 +62,7 @@ fullParser.run('hello world').result;
 // -> { type: 'word list', words: ['HELLO', 'WORLD'] }
 ```
 
-As you can see from the example above, `coroutine` can be used to both express sequences of parsing operations and data transformations, in this case replacing both the need to use `sequenceOf` and `.map`. This was previously done using generator function which resulted in uncertain and forced typing. This new approach will provide better typings.
+As you can see from the example above, `coroutine` can be used to both express sequences of parsing operations and data transformations, in this case replacing both the need to use `sequenceOf` and `.map`.
 
 ## Rewriting the weather data parser
 
