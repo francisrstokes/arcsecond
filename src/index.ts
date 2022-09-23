@@ -149,7 +149,7 @@ export function coroutine<T>(parserFn: ParserFn<T>): Parser<T> {
     let currentValue;
     let currentState = state;
     
-    const _yield = <T>(parser: Parser<T>) => {
+    const run = <T>(parser: Parser<T>) => {
       if (!(parser && parser instanceof Parser)) {
         throw new Error(
           `[coroutine] passed values must be Parsers, got ${parser}.`,
@@ -166,7 +166,7 @@ export function coroutine<T>(parserFn: ParserFn<T>): Parser<T> {
     }
 
     try {
-      const result = parserFn(_yield);
+      const result = parserFn(run);
       return updateResult(currentState,result);
     } catch (e) {
       if (e instanceof Error) {

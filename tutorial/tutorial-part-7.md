@@ -26,11 +26,11 @@ const {
   withData,
 } = require('arcsecond');
 
-const nameParser = coroutine(_yield => {
-  const name = _yield(letters);
-  _yield(char(' '));
+const nameParser = coroutine(run => {
+  const name = run(letters);
+  run(char(' '));
 
-  _yield(
+  run(
     mapData(data => {
       return {
         ...data,
@@ -42,12 +42,12 @@ const nameParser = coroutine(_yield => {
   return name;
 });
 
-const parserBasedOnState = coroutine(_yield => {
-  const stateData = _yield(getData);
+const parserBasedOnState = coroutine(run => {
+  const stateData = run(getData);
 
   const stateBasedProperty = stateData.nameBeginsWithA
-    ? _yield(digits.errorMap(() => 'Expecting a number'))
-    : _yield(letters.errorMap(() => 'Expecting a string'));
+    ? run(digits.errorMap(() => 'Expecting a number'))
+    : run(letters.errorMap(() => 'Expecting a string'));
 
   return stateBasedProperty;
 });

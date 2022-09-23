@@ -40,17 +40,17 @@ Here the parser is extremely simple; it uses the `letters` parser to capture any
 
 ## Coroutines
 
-The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a scanner function which provides \_yield function as argument, and allows parsing data using the \_yield function.
+The next example is perhaps the most powerful tool in the arcsecond library, not only because of how expressive it is, but because the idea of _contextual parsing_ falls out of it for free. The `coroutine` parser takes a scanner function which provides \run function as argument, and allows parsing data using the \run function.
 
 ```javascript
 const { letters, coroutine, char } = require('arcsecond');
 
-const fullParser = coroutine(_yield => {
-  const firstWord = _yield(letters);
+const fullParser = coroutine(run => {
+  const firstWord = run(letters);
 
-  _yield(char(' '));
+  run(char(' '));
 
-  const secondWord = _yield(letters);
+  const secondWord = run(letters);
 
   return {
     type: 'word list',
@@ -78,36 +78,36 @@ const {
 
 const weatherString = str('Weather');
 
-const timeString = coroutine(_yield => {
+const timeString = coroutine(run => {
   // Parse and ignore '('
-  _yield(char('('));
+  run(char('('));
 
   // Parse and store the time string
-  const time = _yield(
+  const time = run(
     choice([str('today'), str('yesterday'), str('one week ago')]),
   );
 
   // Parse and ignore ')'
-  _yield(char(')'));
+  run(char(')'));
 
   return time;
 });
 
 const weatherType = choice([str('Sunny'), str('Cloudy'), str('Rainy')]);
 
-const fullParser = coroutine(_yield => {
+const fullParser = coroutine(run => {
   // Parse the weather string and the space character
-  _yield(weatherString);
-  _yield(char(' '));
+  run(weatherString);
+  run(char(' '));
 
   // Store the time string for later
-  const time = _yield(timeString);
+  const time = run(timeString);
 
   // Parse and ignore the separator
-  _yield(str(': '));
+  run(str(': '));
 
   // Store the weather string
-  const weather = _yield(weatherType);
+  const weather = run(weatherType);
 
   // Return the data in a structured way
   return {
@@ -139,12 +139,10 @@ const {
 // - ten minutes
 // - nine hours
 // - four days
-const pluralTime = coroutine(_yield => {
-  const pluralQuantifier = _yield(letters);
-  _yield(char(' '));
-  const timeQuantifier = _yield(
-    choice([str('hours'), str('days'), str('weeks')]),
-  );
+const pluralTime = coroutine(run => {
+  const pluralQuantifier = run(letters);
+  run(char(' '));
+  const timeQuantifier = run(choice([str('hours'), str('days'), str('weeks')]));
 
   return `${pluralQuantifier} ${timeQuantifier}`;
 });
@@ -154,14 +152,12 @@ const complexTimeString = sequenceOf([
   str(' ago'),
 ]).map(strings => strings.join(''));
 
-const timeString = coroutine(_yield => {
-  _yield(char('('));
+const timeString = coroutine(run => {
+  run(char('('));
 
-  const time = _yield(
-    choice([str('today'), str('yesterday'), complexTimeString]),
-  );
+  const time = run(choice([str('today'), str('yesterday'), complexTimeString]));
 
-  _yield(char(')'));
+  run(char(')'));
 
   return time;
 });

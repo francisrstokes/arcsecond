@@ -121,12 +121,12 @@ const space = char(' ');
 
 const lettersOrDigits = choice([letters, digits]);
 
-const fullParser = coroutine(_yield => {
-  const first = _yield(letters);
-  _yield(space);
-  const second = _yield(lettersOrDigits);
-  _yield(space);
-  const third = _yield(letters);
+const fullParser = coroutine(run => {
+  const first = run(letters);
+  run(space);
+  const second = run(lettersOrDigits);
+  run(space);
+  const third = run(letters);
 
   return [first, second, third];
 });

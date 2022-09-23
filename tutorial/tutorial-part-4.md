@@ -102,11 +102,11 @@ const customSepByWithSequenceOf = separatorParser => valueParser =>
   ]).map(results => results[0]);
 
 const customSepByWithCoroutine = separatorParser => valueParser =>
-  coroutine(_yield => {
+  coroutine(run => {
     const results = [];
 
     while (true) {
-      const value = _yield(either(valueParser));
+      const value = run(either(valueParser));
 
       // We can't parse more values, break from the loop
       if (value.isError) break;
@@ -114,7 +114,7 @@ const customSepByWithCoroutine = separatorParser => valueParser =>
       // Push the captured value into the results array
       results.push(value);
 
-      const sep = _yield(either(separatorParser));
+      const sep = run(either(separatorParser));
 
       // There are no more separators, break from the loop
       if (sep.isError) break;

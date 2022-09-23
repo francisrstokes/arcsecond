@@ -233,9 +233,9 @@ testMany('either', [
 
 testMany('coroutine', [
   () => {
-    const p = coroutine(tokenize => {
-      const firstPart = tokenize(letters);
-      const secondPart = tokenize(digits);
+    const p = coroutine(run => {
+      const firstPart = run(letters);
+      const secondPart = run(digits);
       return {
         result: [firstPart, secondPart],
       };
@@ -253,9 +253,9 @@ testMany('coroutine', [
     });
   },
   () => {
-    const p = coroutine(tokenize => {
-      const firstPart = tokenize(letters);
-      const secondPart = tokenize(digits.errorMap(() => 'Wanted digits'));
+    const p = coroutine(run => {
+      const firstPart = run(letters);
+      const secondPart = run(digits.errorMap(() => 'Wanted digits'));
       return {
         result: [firstPart, secondPart],
       };
@@ -268,16 +268,16 @@ testMany('coroutine', [
     expect(res.index).toEqual(3);
   },
   () => {
-    const p = coroutine(tokenize => {
-      const firstPart = tokenize(letters);
-      const secondPart = tokenize(42);
+    const p = coroutine(run => {
+      const firstPart = run(letters);
+      const secondPart = run(42);
       return {
         result: [firstPart, secondPart],
       };
     });
 
     expect(() => p.run('abc___')).toThrow(
-      '[coroutine] yielded values must be Parsers, got 42.',
+      '[coroutine] passed values must be Parsers, got 42.',
     );
   },
 ]);
@@ -827,8 +827,8 @@ testMany('withData', [
 
 test('getData', () => {
   const p = withData(
-    coroutine(tokenize => {
-      const stateData = tokenize(getData);
+    coroutine(run => {
+      const stateData = run(getData);
       return stateData;
     }),
   );
@@ -839,8 +839,8 @@ test('getData', () => {
 
 testMany('setData', [
   () => {
-    const parser = coroutine(tokenize => {
-      tokenize(setData('New Data'));
+    const parser = coroutine(run => {
+      run(setData('New Data'));
       return 42;
     });
 
@@ -861,9 +861,9 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(tokenize => {
-        const data = tokenize(getData);
-        tokenize(setData(data.map(x => x * 2)));
+      coroutine(run => {
+        const data = run(getData);
+        run(setData(data.map(x => x * 2)));
         return 42;
       }),
     );
@@ -885,9 +885,9 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(tokenize => {
-        tokenize(setData('persists!'));
-        tokenize(fail('nope'));
+      coroutine(run => {
+        run(setData('persists!'));
+        run(fail('nope'));
         return 42;
       }),
     );
@@ -912,8 +912,8 @@ testMany('setData', [
 testMany('mapData', [
   () => {
     const parser = withData(
-      coroutine(tokenize => {
-        tokenize(mapData(d => d.map(x => x * 2)));
+      coroutine(run => {
+        run(mapData(d => d.map(x => x * 2)));
         return 42;
       }),
     );
@@ -1194,10 +1194,10 @@ test('coroutine is stack safe', () => {
   const doubleStack = MAX_STACK_SIZE * 2;
   const input = 'a'.repeat(doubleStack);
 
-  const parser = coroutine(tokenize => {
+  const parser = coroutine(run => {
     let out = '';
     for (let i = 0; i < doubleStack; i++) {
-      out += tokenize(letter).toUpperCase();
+      out += run(letter).toUpperCase();
     }
     return out;
   });
