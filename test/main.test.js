@@ -1,4 +1,4 @@
-const {TextEncoder} = require('util');
+const { TextEncoder } = require('util');
 const {
   Parser,
   parse,
@@ -59,7 +59,13 @@ const f = x => ({ f: x });
 const g = x => ({ g: x });
 
 // https://github.com/fluture-js/Fluture/blob/0ae92d9d61ca8f112ef2bb2327b7e8680100bff1/test/util/util.js#L8
-const MAX_STACK_SIZE = (function r (){try{return 1 + r()}catch(e){return 1}}());
+const MAX_STACK_SIZE = (function r() {
+  try {
+    return 1 + r();
+  } catch (e) {
+    return 1;
+  }
+})();
 
 const expectEquivalence = (parserA, parserB) => () => {
   const strings = [
@@ -119,39 +125,44 @@ testMany.only = (msg, testFns) => {
   });
 };
 
-
 test('ArrayBuffer as input', () => {
-  const input = Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0))).buffer;
+  const input = Uint8Array.from(
+    'hello world!'.split('').map(c => c.charCodeAt(0)),
+  ).buffer;
   const parser = sequenceOf([
     letters,
     char(' '),
     letters,
     char('!'),
-    endOfInput
+    endOfInput,
   ]);
   expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
 });
 
 test('TypedArray as input', () => {
-  const input = Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0)));
+  const input = Uint8Array.from(
+    'hello world!'.split('').map(c => c.charCodeAt(0)),
+  );
   const parser = sequenceOf([
     letters,
     char(' '),
     letters,
     char('!'),
-    endOfInput
+    endOfInput,
   ]);
   expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
 });
 
 test('DataView as input', () => {
-  const input = new DataView(Uint8Array.from("hello world!".split('').map(c => c.charCodeAt(0))).buffer);
+  const input = new DataView(
+    Uint8Array.from('hello world!'.split('').map(c => c.charCodeAt(0))).buffer,
+  );
   const parser = sequenceOf([
     letters,
     char(' '),
     letters,
     char('!'),
-    endOfInput
+    endOfInput,
   ]);
   expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
 });
@@ -169,7 +180,7 @@ testMany('char', [
       'char must be called with a single character, but got abc',
     );
   },
-  expectedFailTest(char('a'), new Uint8Array([0b11110000]))
+  expectedFailTest(char('a'), new Uint8Array([0b11110000])),
 ]);
 
 testMany('anyChar', [
@@ -177,7 +188,7 @@ testMany('anyChar', [
   expectedSuccessTest(anyChar, '😁', '😁bc123'),
   expectedSuccessTest(anyChar, 'ƒ', 'ƒbc123'),
   expectedFailTest(anyChar, ''),
-  expectedFailTest(anyChar, new Uint8Array([0b11110000]))
+  expectedFailTest(anyChar, new Uint8Array([0b11110000])),
 ]);
 
 testMany('peek', [
@@ -189,7 +200,9 @@ testMany('peek', [
 
 test('startOfInput', () => {
   const mustBeginWithHeading = sequenceOf([startOfInput, str('# ')]);
-  const parser = between(mustBeginWithHeading)(endOfInput)(everyCharUntil(endOfInput));
+  const parser = between(mustBeginWithHeading)(endOfInput)(
+    everyCharUntil(endOfInput),
+  );
   expectedSuccessTest(parser, 'Heading', '# Heading')();
   expectedFailTest(parser, ' # Heading')();
 });
@@ -220,9 +233,9 @@ testMany('either', [
 
 testMany('coroutine', [
   () => {
-    const p = coroutine(function*() {
-      const firstPart = yield letters;
-      const secondPart = yield digits;
+    const p = coroutine(tokenize => {
+      const firstPart = tokenize(letters);
+      const secondPart = tokenize(digits);
       return {
         result: [firstPart, secondPart],
       };
@@ -240,9 +253,9 @@ testMany('coroutine', [
     });
   },
   () => {
-    const p = coroutine(function*() {
-      const firstPart = yield letters;
-      const secondPart = yield digits.errorMap(() => 'Wanted digits');
+    const p = coroutine(tokenize => {
+      const firstPart = tokenize(letters);
+      const secondPart = tokenize(digits.errorMap(() => 'Wanted digits'));
       return {
         result: [firstPart, secondPart],
       };
@@ -255,9 +268,9 @@ testMany('coroutine', [
     expect(res.index).toEqual(3);
   },
   () => {
-    const p = coroutine(function*() {
-      const firstPart = yield letters;
-      const secondPart = yield 42;
+    const p = coroutine(tokenize => {
+      const firstPart = tokenize(letters);
+      const secondPart = tokenize(42);
       return {
         result: [firstPart, secondPart],
       };
@@ -284,7 +297,7 @@ testMany('digit', [
   expectedSuccessTest(digit, '1', '1234'),
   expectedFailTest(digit, 'abc123'),
   expectedFailTest(digit, ''),
-  expectedFailTest(digit, new Uint8Array([0b11110000]))
+  expectedFailTest(digit, new Uint8Array([0b11110000])),
 ]);
 
 testMany('digits', [
@@ -299,7 +312,7 @@ testMany('letter', [
   expectedSuccessTest(letter, 'A', 'AbCd1234'),
   expectedFailTest(letter, '123ABxc'),
   expectedFailTest(letter, ''),
-  expectedFailTest(letter, new Uint8Array([0b11110000]))
+  expectedFailTest(letter, new Uint8Array([0b11110000])),
 ]);
 
 testMany('letters', [
@@ -321,14 +334,16 @@ testMany('succeedWith', [
   expectedSuccessTest(succeedWith('yes'), 'yes', '12435'),
 ]);
 
-testMany(
-  'exactly', [
-    expectedSuccessTest(exactly(3)(char('*')), '***'.split(''), '***'),
-    expectedSuccessTest(exactly(4)(digit), '1234'.split(''), '1234abc'),
-    expectedFailTest(exactly(4)(digit), 'abc'),
-    expectedThrowTest(() => exactly('a')(digit), '123abc', `exactly must be called with a number > 0, but got a`)
-  ]
-);
+testMany('exactly', [
+  expectedSuccessTest(exactly(3)(char('*')), '***'.split(''), '***'),
+  expectedSuccessTest(exactly(4)(digit), '1234'.split(''), '1234abc'),
+  expectedFailTest(exactly(4)(digit), 'abc'),
+  expectedThrowTest(
+    () => exactly('a')(digit),
+    '123abc',
+    `exactly must be called with a number > 0, but got a`,
+  ),
+]);
 
 testMany('many', [
   expectedSuccessTest(many(digit), '1234'.split(''), '1234abc'),
@@ -374,8 +389,7 @@ testMany('anyOfString', [
   expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '≤', '≤can I match'),
   expectedSuccessTest(anyOfString('a≤˚🔺cdef'), '🔺', '🔺can I match'),
   expectedFailTest(anyOfString('abcdef'), 'zebra'),
-  expectedFailTest(anyOfString('abcdef'), new Uint8Array([0b11110000]))
-
+  expectedFailTest(anyOfString('abcdef'), new Uint8Array([0b11110000])),
 ]);
 
 testMany('namedSequenceOf', [
@@ -503,7 +517,7 @@ testMany('everythingUntil', [
     'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
   ),
   expectedSuccessTest(everythingUntil(char('!')), [], '!'),
-  expectedFailTest(everythingUntil(char('!')), '')
+  expectedFailTest(everythingUntil(char('!')), ''),
 ]);
 
 testMany('everyCharUntil', [
@@ -518,7 +532,7 @@ testMany('everyCharUntil', [
     'dsv2#%3423√ç∫˜µ˚∆˙∫√†¥!',
   ),
   expectedSuccessTest(everyCharUntil(char('!')), '', '!'),
-  expectedFailTest(everyCharUntil(char('!')), '')
+  expectedFailTest(everyCharUntil(char('!')), ''),
 ]);
 
 test('errorMapTo', () => {
@@ -548,7 +562,7 @@ testMany('anyCharExcept', [
   expectedSuccessTest(anyCharExcept(char('!')), '1', '1'),
   expectedSuccessTest(anyCharExcept(char('!')), '√', '√'),
   expectedFailTest(anyCharExcept(char('!')), '!'),
-  expectedFailTest(anyCharExcept(char('!')), new Uint8Array([0b11110000]))
+  expectedFailTest(anyCharExcept(char('!')), new Uint8Array([0b11110000])),
 ]);
 
 testMany('lookAhead', [
@@ -667,7 +681,9 @@ test('tapParser', () => {
   expect(value.data).toEqual(null);
   expect(value.result).toEqual(null);
   expect(value.isError).toEqual(true);
-  expect(value.error).toEqual(`ParseError (position 0): Expecting character 'a', got 'x'`);
+  expect(value.error).toEqual(
+    `ParseError (position 0): Expecting character 'a', got 'x'`,
+  );
 });
 
 test('toPromise', async () => {
@@ -811,8 +827,8 @@ testMany('withData', [
 
 test('getData', () => {
   const p = withData(
-    coroutine(function*() {
-      const stateData = yield getData;
+    coroutine(tokenize => {
+      const stateData = tokenize(getData);
       return stateData;
     }),
   );
@@ -823,8 +839,8 @@ test('getData', () => {
 
 testMany('setData', [
   () => {
-    const parser = coroutine(function*() {
-      yield setData('New Data');
+    const parser = coroutine(tokenize => {
+      tokenize(setData('New Data'));
       return 42;
     });
 
@@ -845,9 +861,9 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(function*() {
-        const data = yield getData;
-        yield setData(data.map(x => x * 2));
+      coroutine(tokenize => {
+        const data = tokenize(getData);
+        tokenize(setData(data.map(x => x * 2)));
         return 42;
       }),
     );
@@ -869,9 +885,9 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(function*() {
-        yield setData('persists!');
-        yield fail('nope');
+      coroutine(tokenize => {
+        tokenize(setData('persists!'));
+        tokenize(fail('nope'));
         return 42;
       }),
     );
@@ -896,8 +912,8 @@ testMany('setData', [
 testMany('mapData', [
   () => {
     const parser = withData(
-      coroutine(function*() {
-        yield mapData(d => d.map(x => x * 2));
+      coroutine(tokenize => {
+        tokenize(mapData(d => d.map(x => x * 2)));
         return 42;
       }),
     );
@@ -1067,7 +1083,7 @@ testMany('map (laws)', [
 
 testMany('errorMap (laws)', [
   expectEquivalence(
-    fail('nope').errorMap(({error}) => error),
+    fail('nope').errorMap(({ error }) => error),
     fail('nope'),
   ),
   expectEquivalence(
@@ -1079,7 +1095,7 @@ testMany('errorMap (laws)', [
 ]);
 
 test('errorMap (equivalence to errorMapTo)', () => {
-  const fnMap = ({error}) => ({ value: error });
+  const fnMap = ({ error }) => ({ value: error });
   const fnMapTo = x => ({ value: x });
 
   const failMap = fail('nope').errorMap(fnMap);
@@ -1178,10 +1194,10 @@ test('coroutine is stack safe', () => {
   const doubleStack = MAX_STACK_SIZE * 2;
   const input = 'a'.repeat(doubleStack);
 
-  const parser = coroutine(function* () {
+  const parser = coroutine(tokenize => {
     let out = '';
     for (let i = 0; i < doubleStack; i++) {
-      out += (yield letter).toUpperCase();
+      out += tokenize(letter).toUpperCase();
     }
     return out;
   });
@@ -1191,24 +1207,16 @@ test('coroutine is stack safe', () => {
 
 testMany('regression: regex captures the right number of characters', [
   expectedSuccessTest(
-    sequenceOf([
-      str('('),
-      regex(/^aeioú/),
-      str(')'),
-    ]),
+    sequenceOf([str('('), regex(/^aeioú/), str(')')]),
     ['(', 'aeioú', ')'],
     '(aeioú)',
   ),
-])
+]);
 
 testMany('regression: str captures the right number of characters', [
   expectedSuccessTest(
-    sequenceOf([
-      str('('),
-      str('aeioú'),
-      str(')'),
-    ]),
+    sequenceOf([str('('), str('aeioú'), str(')')]),
     ['(', 'aeioú', ')'],
     '(aeioú)',
-  )
+  ),
 ]);
