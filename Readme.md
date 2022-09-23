@@ -29,7 +29,57 @@ The [arcsecond-binary](https://github.com/francisrstokes/arcsecond-binary) peer 
       - [.chain](#chain)
       - [.mapFromData](#mapFromData)
       - [.chainFromData](#chainFromData)
-    - [Functions](#functions) - [setData](#setData) - [withData](#withData) - [mapData](#mapData) - [getData](#getData) - [coroutine](#coroutine) - [char](#char) - [anyChar](#anyChar) - [str](#str) - [digit](#digit) - [digits](#digits) - [letter](#letter) - [letters](#letters) - [whitespace](#whitespace) - [optionalWhitespace](#optionalWhitespace) - [peek](#peek) - [anyOfString](#anyOfString) - [regex](#regex) - [sequenceOf](#sequenceOf) - [namedSequenceOf](#namedSequenceOf) - [choice](#choice) - [lookAhead](#lookAhead) - [sepBy](#sepBy) - [sepBy1](#sepBy1) - [exactly](#exactly) - [many](#many) - [many1](#many1) - [between](#between) - [everythingUntil](#everythingUntil) - [everyCharUntil](#everyCharUntil) - [anythingExcept](#anythingExcept) - [anyCharExcept](#anyCharExcept) - [possibly](#possibly) - [startOfInput](#startOfInput) - [endOfInput](#endOfInput) - [skip](#skip) - [pipeParsers](#pipeParsers) - [composeParsers](#composeParsers) - [takeRight](#takeRight) - [takeLeft](#takeLeft) - [recursiveParser](#recursiveParser) - [tapParser](#tapParser) - [decide](#decide) - [mapTo](#mapTo) - [errorMapTo](#errorMapTo) - [fail](#fail) - [succeedWith](#succeedWith) - [either](#either) - [toPromise](#toPromise) - [toValue](#toValue) - [parse](#parse)
+    - [Functions](#functions)
+      - [setData](#setData)
+      - [withData](#withData)
+      - [mapData](#mapData)
+      - [getData](#getData)
+      - [coroutine](#coroutine)
+      - [char](#char)
+      - [anyChar](#anyChar)
+      - [str](#str)
+      - [digit](#digit)
+      - [digits](#digits)
+      - [letter](#letter)
+      - [letters](#letters)
+      - [whitespace](#whitespace)
+      - [optionalWhitespace](#optionalWhitespace)
+      - [peek](#peek)
+      - [anyOfString](#anyOfString)
+      - [regex](#regex)
+      - [sequenceOf](#sequenceOf)
+      - [namedSequenceOf](#namedSequenceOf)
+      - [choice](#choice)
+      - [lookAhead](#lookAhead)
+      - [sepBy](#sepBy)
+      - [sepBy1](#sepBy1)
+      - [exactly](#exactly)
+      - [many](#many)
+      - [many1](#many1)
+      - [between](#between)
+      - [everythingUntil](#everythingUntil)
+      - [everyCharUntil](#everyCharUntil)
+      - [anythingExcept](#anythingExcept)
+      - [anyCharExcept](#anyCharExcept)
+      - [possibly](#possibly)
+      - [startOfInput](#startOfInput)
+      - [endOfInput](#endOfInput)
+      - [skip](#skip)
+      - [pipeParsers](#pipeParsers)
+      - [composeParsers](#composeParsers)
+      - [takeRight](#takeRight)
+      - [takeLeft](#takeLeft)
+      - [recursiveParser](#recursiveParser)
+      - [tapParser](#tapParser)
+      - [decide](#decide)
+      - [mapTo](#mapTo)
+      - [errorMapTo](#errorMapTo)
+      - [fail](#fail)
+      - [succeedWith](#succeedWith)
+      - [either](#either)
+      - [toPromise](#toPromise)
+      - [toValue](#toValue)
+      - [parse](#parse)
       </details>
 
   - [A note on recursive grammars](#a-note-on-recursive-grammars)
@@ -104,19 +154,9 @@ The examples are built as es6 modules, which means they need node to be launched
 
 ## API
 
-_Non-essential note on the types:_ This documentation is using [Hindley-Milner type signatures](https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system) to show the types of function arguments and the return value.
-
-The main "type" in arcsecond is `Parser e a s`:
-
-- The `e` refers to a possible error which this parser may generate.
-- The `a` refers to a possible value which this parser may capture.
-- The `s` refers to a general user-defined state associated with the parser.
-
 ### Methods
 
 #### .run
-
-`.run :: Parser e a s ~> x -> Either e a`
 
 `.run` is a method on every parser, which takes input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), and returns the result of parsing the input using the parser.
 
@@ -133,8 +173,6 @@ str('hello').run('hello')
 ```
 
 #### .fork
-
-`.fork :: Parser e a s ~> x -> (e -> ParserState e a s -> f) -> (a -> ParserState e a s -> b)`
 
 The `.fork` method is similar to `.run`. It takes input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), an _error transforming function_ and a _success transforming function_, and parses the input. If parsing was successful, the result is transformed using the _success transforming function_ and returned. If parsing was not successful, the result is transformed using the _error transforming function_ and returned.
 
@@ -175,8 +213,6 @@ str('hello').fork(
 
 #### .map
 
-`.map :: Parser e a s ~> (a -> b) -> Parser e b s`
-
 `.map` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This method can be used to apply structure or transform the values as they are being parsed.
 
 **Example**
@@ -200,8 +236,6 @@ newParser.run('hello world')
 ```
 
 #### .chain
-
-`.chain :: Parser e a s ~> (a -> Parser e b s) -> Parser e b s`
 
 `.chain` takes a function which recieves the last matched value and should return a parser. That parser is then used to parse the following input, forming a chain of parsers based on previous input. `.chain` is the fundamental way of creating _contextual parsers_.
 
@@ -265,8 +299,6 @@ newParser.run('nope nothing')
 
 #### .mapFromData
 
-`.mapFromData :: Parser e a s ~> (StateData a s -> b) -> Parser e b s`
-
 `.mapFromData` is almost the same as `.map`, except the function which it is passed also has access to the _internal state data_, and can thus transform values based on this data.
 
 **Example**
@@ -291,8 +323,6 @@ parserWithData(42).run('hello');
 ```
 
 #### .chainFromData
-
-`.chainFromData :: Parser e a s ~> (StateData a s -> Parser f b t) -> Parser f b t`
 
 `.chainFromData` is almost the same as `.chain`, except the function which it is passed also has access to the _internal state data_, and can choose how parsing continues based on this data.
 
@@ -331,8 +361,6 @@ parser({ bypassNormalApproach: true }).run('hello world');
 
 #### .errorMap
 
-`.errorMap :: Parser e a s ~> ((e, Integer, s) -> f) -> Parser f a s`
-
 `.errorMap` is like [.map](#map) but it transforms the error value. The function passed to `.errorMap` gets an object the _current error message_ (`error`) , the _index_ (`index`) that parsing stopped at, and the _data_ (`data`) from this parsing session.
 
 **Example**
@@ -350,8 +378,6 @@ newParser.run('1234')
 ```
 
 #### .errorChain
-
-`.errorChain :: Parser e a s ~> ((e, Integer, s) -> Parser f a s) -> Parser f a s`
 
 `.errorChain` is almost the same as `.chain`, except that it only runs if there is an error in the parsing state. This is a useful method when either trying to recover from errors, or for when a more specific error message should be constructed.
 
@@ -394,8 +420,6 @@ s = parser.run('');
 ### Functions
 
 #### setData
-
-`setData :: t -> Parser e a t`
 
 `setData` takes anything that should be set as the _internal state data_, and returns a parser that will perform that side effect when the parser is run. This does not consume any input. If parsing is currently in an errored state, then the data **will not** be set.
 
@@ -473,8 +497,6 @@ parser.run('Parser is not looking at the text!');
 
 #### withData
 
-`withData :: Parser e a x -> s -> Parser e a s`
-
 `withData` takes a _provided parser_, and returns a function waiting for some _state data_ to be set, and then returns a new parser. That parser, when run, ensures that the _state data_ is set as the _internal state data_ before the _provided parser_ runs.
 
 **Example**
@@ -502,8 +524,6 @@ parserWithoutData.run('Jim');
 
 #### mapData
 
-`mapData :: (s -> t) -> Parser e a t`
-
 `mapData` takes a function that recieves and returns some _state data_, and transforms the _internal state data_ using the function, without consuming any input.
 
 **Example**
@@ -521,8 +541,6 @@ parser("hello world!").run('Jim');
 ```
 
 #### getData
-
-`getData :: Parser e s s`
 
 `getData` is a parser that will always return what is contained in the _internal state data_, without consuming any input.
 
@@ -585,18 +603,18 @@ parser({
 
 #### coroutine
 
-`coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s`
+`coroutine` takes a user provided _parser function_, to which is passed a `run` function. Within the _parser function_, the user can `run` other parsers, and get immediate access to their results.
 
-`coroutine` takes a generator function, in which parsers are `yield`ed. `coroutine` allows you to write parsers in a more imperative and sequential way - in much the same way `async/await` allows you to write code with promises in a more sequential way.
+`coroutine` allows you to write parsers in a more imperative and sequential way - in much the same way `async/await` allows you to write code with promises in a more sequential way.
 
-Inside of the generator function, you can use all regular JavaScript language features, like loops, variable assignments, and conditional statements. This makes it easy to write very powerful parsers using `coroutine`, but on the other side it can lead to less readable, more complex code.
+Inside of the _parser function_, you can use all regular JavaScript language features, like loops, variable assignments, try/catch, and conditional statements. This makes it easy to write very powerful parsers using `coroutine`, but on the other side it can lead to less readable, more complex code.
 
 Debugging is also much easier, as breakpoints can be easily added, and values logged to the console after they have been parsed.
 
 **Example**
 
 ```JavaScript
-const parser = coroutine(run=> {
+const parser = coroutine(run => {
   // Capture some letters and assign them to a variable
   const name = run(letters);
 
@@ -608,7 +626,7 @@ const parser = coroutine(run=> {
   // Capture a space
   run(char(' '));
 
-  if (age > 18) {
+  if (age >= 18) {
     run(str('is an adult'));
   } else {
     run(str('is a child'));
@@ -636,8 +654,6 @@ parser.run('Jim 17 is an adult');
 
 #### char
 
-`char :: Char -> Parser e Char s`
-
 `char` takes a character and returns a parser that matches that character **exactly one** time.
 
 **Example**
@@ -653,8 +669,6 @@ char ('h').run('hello')
 ```
 
 #### anyChar
-
-`anyChar :: Parser e Char s`
 
 `anyChar` matches **exactly one** utf-8 character.
 
@@ -680,8 +694,6 @@ anyChar.run('😉')
 
 #### str
 
-`str :: String -> Parser e String s`
-
 `str` takes a string and returns a parser that matches that string **exactly one** time.
 
 **Example**
@@ -697,8 +709,6 @@ str('hello').run('hello world')
 ```
 
 #### digit
-
-`digit :: Parser e String s`
 
 `digit` is a parser that matches **exactly one** numerical digit `/[0-9]/`.
 
@@ -716,8 +726,6 @@ digit.run('99 bottles of beer on the wall')
 
 #### digits
 
-`digits :: Parser e String s`
-
 `digits` is a parser that matches **one or more** numerical digit `/[0-9]/`.
 
 **Example**
@@ -733,8 +741,6 @@ digits.run('99 bottles of beer on the wall')
 ```
 
 #### letter
-
-`letter :: Parser e Char s`
 
 `letter` is a parser that matches **exactly one** alphabetical letter `/[a-zA-Z]/`.
 
@@ -752,8 +758,6 @@ letter.run('hello world')
 
 #### letters
 
-`letters :: Parser e Char s`
-
 `letters` is a parser that matches **one or more** alphabetical letter `/[a-zA-Z]/`.
 
 **Example**
@@ -769,8 +773,6 @@ letters.run('hello world')
 ```
 
 #### whitespace
-
-`whitespace :: Parser e String s`
 
 `whitespace` is a parser that matches **one or more** whitespace characters.
 
@@ -802,8 +804,6 @@ newParser.run('helloworld')
 
 #### optionalWhitespace
 
-`optionalWhitespace :: Parser e String s`
-
 `optionalWhitespace` is a parser that matches **zero or more** whitespace characters.
 
 **Example**
@@ -834,8 +834,6 @@ newParser.run('helloworld')
 
 #### peek
 
-`peek :: Parser e String s`
-
 `peek` matches **exactly one** _numerical byte_ without consuming any input.
 
 **Example**
@@ -863,8 +861,6 @@ sequenceOf([
 
 #### anyOfString
 
-`anyOfString :: String -> Parser e Char s`
-
 `anyOfString` takes a string and returns a parser that matches **exactly one** character from that string.
 
 **Example**
@@ -881,8 +877,6 @@ anyOfString('aeiou').run('unusual string')
 
 #### regex
 
-`regex :: RegExp -> Parser e String s`
-
 `regex` takes a RegExp and returns a parser that matches **as many characters** as the RegExp matches.
 
 **Example**
@@ -898,10 +892,6 @@ regex(/^[hH][aeiou].{2}o/).run('hello world')
 ```
 
 #### sequenceOf
-
-`sequenceOf :: [Parser * * *] -> Parser * [*] *`
-
-Note: `sequenceOf` cannot have an accurate type signature in JavaScript
 
 `sequenceOf` takes an array of parsers, and returns a new parser that matches each of them sequentially, collecting up the results into an array.
 
@@ -925,10 +915,6 @@ newParser.run('hello world')
 ```
 
 #### namedSequenceOf
-
-`namedSequenceOf :: [(String, Parser * * *)] -> Parser e (StrMap *) s`
-
-Note: `namedSequenceOf` cannot have an accurate type signature in JavaScript
 
 `namedSequenceOf` takes an array of string/parser pairs, and returns a new parser that matches each of them sequentially, collecting up the results into an object where the key is the string in the pair.
 
@@ -960,10 +946,6 @@ newParser.run('hello world')
 
 #### choice
 
-`choice :: [Parser * * *] -> Parser * * *`
-
-Note: `choice` cannot have an accurate type signature in JavaScript
-
 `choice` takes an array of parsers, and returns a new parser that tries to match each one of them sequentially, and returns the first match. If `choice` fails, then it returns the error message of the parser that matched the most from the string.
 
 **Example**
@@ -987,8 +969,6 @@ newParser.run('hello world')
 
 #### lookAhead
 
-`lookAhead :: Parser e a s -> Parser e a s`
-
 `lookAhead` takes _look ahead_ parser, and returns a new parser that matches using the _look ahead_ parser, but without consuming input.
 
 **Example**
@@ -1010,8 +990,6 @@ newParser.run('hello world')
 ```
 
 #### sepBy
-
-`sepBy :: Parser e a s -> Parser e b s -> Parser e [b] s`
 
 `sepBy` takes two parsers - a _separator_ parser and a _value_ parser - and returns a new parser that matches **zero or more** values from the _value_ parser that are separated by values of the _separator_ parser. Because it will match zero or more values, this parser will _fail_ if a _value_ is followed by a _separator_ but NOT another _value_. If there's no _value_, the result will be an empty array, not failure.
 
@@ -1047,8 +1025,6 @@ newParser.run('12345')
 
 #### sepBy1
 
-`sepBy1 :: Parser e a s -> Parser e b s -> Parser e [b] s`
-
 `sepBy1` is the same as `sepBy`, except that it matches **one or more** occurence.
 
 **Example**
@@ -1074,8 +1050,6 @@ newParser.run('1,2,3')
 ```
 
 #### exactly
-
-`exactly :: (Integer) -> (Parser e s a) -> Parser e s [a]`
 
 `exactly` takes a positive number and returns a function. That function takes a parser and returns a new parser which matches the given parser the specified number of times.
 
@@ -1111,8 +1085,6 @@ newParser.run('12345')
 
 #### many
 
-`many :: Parser e s a -> Parser e s [a]`
-
 `many` takes a parser and returns a new parser which matches that parser **zero or more** times. Because it will match zero or more values, this parser will always match, resulting in an empty array in the zero case.
 
 **Example**
@@ -1146,8 +1118,6 @@ newParser.run('12345')
 ```
 
 #### many1
-
-`many1 :: Parser e s a -> Parser e s [a]`
 
 `many1` is the same as `many`, except that it matches **one or more** occurence.
 
@@ -1183,8 +1153,6 @@ newParser.run('12345')
 
 #### between
 
-`between :: Parser e a s -> Parser e b s -> Parser e c s -> Parser e b s`
-
 `between` takes 3 parsers, a _left_ parser, a _right_ parser, and a _value_ parser, returning a new parser that matches a value matched by the _value_ parser, between values matched by the _left_ parser and the _right_ parser.
 
 This parser can easily be partially applied with `char ('(')` and `char (')')` to create a `betweenRoundBrackets` parser, for example.
@@ -1215,8 +1183,6 @@ betweenRoundBrackets (many (letters)).run('(hello world)')
 
 #### everythingUntil
 
-`everythingUntil :: Parser e a s -> Parser e String s`
-
 **Note**: Between 2.x and 3.x, the definition of the `everythingUntil` has changed. In 3.x, what was previously `everythingUntil` is now [`everyCharUntil`](#everyCharUntil).
 
 `everythingUntil` takes a _termination_ parser and returns a new parser which matches every possible _numerical byte_ up until a value is matched by the _termination_ parser. When a value is matched by the _termination_ parser, it is not "consumed".
@@ -1238,7 +1204,6 @@ const newParser = sequenceOf ([
   str ('This is another sentence')
 ]);
 
-
 newParser.run('This is a sentence.This is another sentence')
 // -> {
 //      isError: true,
@@ -1249,8 +1214,6 @@ newParser.run('This is a sentence.This is another sentence')
 ```
 
 #### everyCharUntil
-
-`everyCharUntil :: Parser e a s -> Parser e String s`
 
 `everyCharUntil` takes a _termination_ parser and returns a new parser which matches every possible _character_ up until a value is matched by the _termination_ parser. When a value is matched by the _termination_ parser, it is not "consumed".
 
@@ -1271,7 +1234,6 @@ const newParser = sequenceOf ([
   str ('This is another sentence')
 ]);
 
-
 newParser.run('This is a sentence.This is another sentence')
 // -> {
 //      isError: true,
@@ -1282,8 +1244,6 @@ newParser.run('This is a sentence.This is another sentence')
 ```
 
 #### anythingExcept
-
-`anythingExcept :: Parser e a s -> Parser e Char s`
 
 **Note**: Between 2.x and 3.x, the definition of the `anythingExcept` has changed. In 3.x, what was previously `anythingExcept` is now [`anyCharExcept`](#anyCharExcept).
 
@@ -1312,8 +1272,6 @@ manyExceptDot.run('This is a sentence.')
 
 #### anyCharExcept
 
-`anyCharExcept :: Parser e a s -> Parser e Char s`
-
 `anyCharExcept` takes a _exception_ parser and returns a new parser which matches **exactly one** _character_, if it is not matched by the _exception_ parser.
 
 **Example**
@@ -1339,8 +1297,6 @@ manyExceptDot.run('This is a sentence.')
 
 #### possibly
 
-`possibly :: Parser e a s -> Parser e (a | Null) s`
-
 `possibly` takes an _attempt_ parser and returns a new parser which tries to match using the _attempt_ parser. If it is unsuccessful, it returns a null value and does not "consume" any input.
 
 **Example**
@@ -1361,8 +1317,6 @@ newParser.run('Yep I am here')
 ```
 
 #### startOfInput
-
-`startOfInput :: Parser e String s`
 
 `startOfInput` is a parser that only succeeds when the parser is at the beginning of the input.
 
@@ -1394,8 +1348,6 @@ newParser.run(' # Heading');
 
 #### endOfInput
 
-`endOfInput :: Parser e Null s`
-
 `endOfInput` is a parser that only succeeds when there is no more input to be parsed.
 
 **Example**
@@ -1425,8 +1377,6 @@ newParser.run('')
 
 #### skip
 
-`skip :: Parser e a s -> Parser e a s`
-
 `skip` takes a _skip_ parser and returns a new parser which matches using the _skip_ parser, but doesn't return its value, but instead the value of whatever came before it.
 
 **Example**
@@ -1448,8 +1398,6 @@ newParser.run('abc123def')
 ```
 
 #### pipeParsers
-
-`pipeParsers :: [Parser * * *] -> Parser * * *`
 
 `pipeParsers` takes an array of parsers and composes them left to right, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
@@ -1473,8 +1421,6 @@ newParser.run('hello world')
 
 #### composeParsers
 
-`pipeParsers :: [Parser * * *] -> Parser * * *`
-
 `composeParsers` takes an array of parsers and composes them right to left, so each parsers return value is passed into the next one in the chain. The result is a new parser that, when run, yields the result of the final parser in the chain.
 
 **Example**
@@ -1497,8 +1443,6 @@ newParser.run('hello world')
 
 #### takeRight
 
-`takeRight :: Parser e a s -> Parser f b t -> Parser f b t`
-
 `takeRight` takes two parsers, _left_ and _right_, and returns a new parser that first matches the _left_, then the _right_, and keeps the value matched by the _right_.
 
 **Example**
@@ -1517,8 +1461,6 @@ newParser.run('hello world')
 
 #### takeLeft
 
-`takeLeft :: Parser e a s -> Parser f b t -> Parser e a s`
-
 `takeLeft` takes two parsers, _left_ and _right_, and returns a new parser that first matches the _left_, then the _right_, and keeps the value matched by the _left_.
 
 **Example**
@@ -1536,8 +1478,6 @@ newParser.run('hello world')
 ```
 
 #### recursiveParser
-
-`recursiveParser :: (() => Parser e a s) -> Parser e a s`
 
 `recursiveParser` takes a function that returns a parser (a thunk), and returns that same parser. This is needed in order to create _recursive parsers_ because JavaScript is not a "lazy" language.
 
@@ -1571,8 +1511,6 @@ spaceSeparated(value).run('abc 123 [42,somethingelse] 45')
 
 #### tapParser
 
-`tapParser :: (a => ()) -> Parser e a s`
-
 `tapParser` takes a function and returns a parser that does nothing and consumes no input, but runs the provided function on the last parsed value. This is intended as a debugging tool to see the state of parsing at any point in a sequential operation like `sequenceOf` or `pipeParsers`.
 
 **Example**
@@ -1596,8 +1534,6 @@ newParser.run('hello world')
 ```
 
 #### decide
-
-`decide :: (a -> Parser e b s) -> Parser e b s`
 
 `decide` takes a function that recieves the last matched value and returns a new parser. It's important that the function **always** returns a parser. If a valid one cannot be selected, you can always use [fail](#fail).
 
@@ -1644,8 +1580,6 @@ newParser.run('asPineapple wayoh')
 
 #### mapTo
 
-`mapTo :: (a -> b) -> Parser e b s`
-
 `mapTo` takes a function and returns a parser does not consume input, but instead runs the provided function on the last matched value, and set that as the new last matched value. This function can be used to apply structure or transform the values as they are being parsed.
 
 **Example**
@@ -1675,8 +1609,6 @@ newParser.run('hello world')
 
 #### errorMapTo
 
-`errorMapTo :: (ParserState e a s -> f) -> Parser f a s`
-
 `errorMapTo` is like [mapTo](#mapto) but it transforms the error value. The function passed to `errorMapTo` gets the _current error message_ as its first argument and the _index_ that parsing stopped at as the second.
 
 **Example**
@@ -1698,8 +1630,6 @@ newParser.run('1234')
 
 #### fail
 
-`fail :: e -> Parser e a s`
-
 `fail` takes an _error message_ string and returns a parser that always fails with the provided _error message_.
 
 **Example**
@@ -1716,8 +1646,6 @@ fail('Nope').run('hello world')
 
 #### succeedWith
 
-`succeedWith :: a -> Parser e a s`
-
 `succeedWith` takes an value and returns a parser that always matches that value and does not consume any input.
 
 **Example**
@@ -1733,8 +1661,6 @@ succeedWith ('anything').run('hello world')
 ```
 
 #### either
-
-`either :: Parser e a s -> Parser e (Either e a) s`
 
 `either` takes a parser and returns a parser that will always succeed, but the captured value will be an Either, indicating success or failure.
 
@@ -1754,8 +1680,6 @@ either(fail('nope!')).run('hello world')
 ```
 
 #### toPromise
-
-`toPromise :: ParserResult e a s -> Promise (e, Integer, s) a`
 
 `toPromise` converts a `ParserResult` (what is returned from `.run`) into a `Promise`.
 
@@ -1789,8 +1713,6 @@ toPromise(parser.run('goodbye world'))
 
 #### toValue
 
-`toValue :: ParserResult e a s -> a`
-
 `toValue` converts a `ParserResult` (what is returned from `.run`) into a regular value, and throws an error if the result contained one.
 
 **Example**
@@ -1808,8 +1730,6 @@ try {
 ```
 
 #### parse
-
-`parse :: Parser e a s -> String -> s -> Either e a`
 
 `parse` takes a parser and input (which may be a `string`, [`TypedArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray), [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), or [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView)), and returns the result of parsing the input using the parser.
 
