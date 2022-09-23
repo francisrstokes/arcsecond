@@ -10,16 +10,14 @@ So far, in order to get the core idea of parser combinators, we haven't mentione
 
 arcsecond internally keeps track of whether parser resulted in an error. This does not include syntax or reference errors of course, only errors caused by expecting certain kinds of input to a parser which wasn't found.
 
-Just like a Promise can be either `Resolved` or `Rejected`, the parsing result can be in an *errored* or *not errored* state.
+Just like a Promise can be either `Resolved` or `Rejected`, the parsing result can be in an _errored_ or _not errored_ state.
 
 ```javascript
-const {
-  str
-} = require('arcsecond');
+const { str } = require('arcsecond');
 
 const fullParser = str('hello');
 
-fullParser.run('goodbye')
+fullParser.run('goodbye');
 // -> {
 //      isError: true,
 //      error: "ParseError (position 0): Expecting string 'hello', got 'goodb...'",
@@ -30,16 +28,14 @@ fullParser.run('goodbye')
 
 Previously when we called `.run`, we immediately used `.result`. But because an error in parsing was encountered we no longer have a `.result` property, but rather a `.error` property that describes what went wrong. We can check if parsing was successful by looking at the `.isError` property.
 
-Also notice that there is more information inside the *parsing result object* object than just the error - we also have the index at which the error occurred within the string, and there is another property called `data` which will be explained in more detail in part 7 of this tutorial.
+Also notice that there is more information inside the _parsing result object_ object than just the error - we also have the index at which the error occurred within the string, and there is another property called `data` which will be explained in more detail in part 7 of this tutorial.
 
 ## Fork
 
 So how should errors be handled? There are a few different options. The first is simply to use `.run` - as shown above - and to check for `parsingResult.isError` and act accordingly. The second is `.fork`, which lets us handle the possible result or possible error with handler functions:
 
 ```javascript
-const {
-  str
-} = require('arcsecond');
+const { str } = require('arcsecond');
 
 const fullParser = str('hello');
 
@@ -57,24 +53,21 @@ const myResult = fullParser.fork(
       return someOtherValue;
     }
   },
-  
+
   // A success handler
   (result, parsingResult) => {
     console.log(`The final result: ${result}`);
     return result;
-  }
+  },
 );
 ```
 
 ## Working with Promises
 
-The *parsing result object* can be converted to a Promise without losing any information, because they can both have a possible error or success state. arcsecond has a built in utility for this called `toPromise`
+The _parsing result object_ can be converted to a Promise without losing any information, because they can both have a possible error or success state. arcsecond has a built in utility for this called `toPromise`
 
 ```javascript
-const {
-  str,
-  toPromise
-} = require('arcsecond');
+const { str, toPromise } = require('arcsecond');
 
 const fullParser = str('hello');
 
@@ -83,7 +76,7 @@ const result = toPromise(fullParser.run('goodbye'))
     console.log(result);
     return result;
   })
-  .catch(({error}) => {
+  .catch(({ error }) => {
     throw new Error(error);
   });
 ```
@@ -103,19 +96,13 @@ Perhaps this string sometimes comes in the form:
 where the comma is optional.
 
 ```javascript
-const {
-  sequenceOf,
-  str,
-  letters,
-  possibly,
-  char
-} = require('arcsecond');
+const { sequenceOf, str, letters, possibly, char } = require('arcsecond');
 
 const fullParser = sequenceOf([
   str('Hello'),
   possibly(char(',')),
   char(' '),
-  letters
+  letters,
 ]);
 
 fullParser.run('Hello, francis');
@@ -145,19 +132,19 @@ const {
   letters,
   possibly,
   fail,
-  char
+  char,
 } = require('arcsecond');
 
-const fullParser = coroutine(function* () {
-  yield str('Hello');
-  yield possibly(char(','));
-  yield char(' ');
+const fullParser = coroutine(run => {
+  run(str('Hello'));
+  run(possibly(char(',')));
+  run(char(' '));
 
-  const name = yield either(letters);
+  const name = run(either(letters));
 
   if (name.isError) {
     // Instead of a cryptic message about where parsing went wrong, we can instead make a better message
-    yield fail('Names must be made of alphabet characters');
+    run(fail('Names must be made of alphabet characters'));
   }
 
   return name.value;
@@ -184,7 +171,7 @@ This is a very simple example, but this method comes in handy when using more co
 
 ## Summary
 
-When a parser is run using `.run`, it returns a *parsing result object*, which encodes a possible error/result. If we use `.fork` instead, we can explicitly handle the errors and successes.
+When a parser is run using `.run`, it returns a _parsing result object_, which encodes a possible error/result. If we use `.fork` instead, we can explicitly handle the errors and successes.
 
 Expected errors can be anticipated in the parser itself using `possibly` and `either`.
 

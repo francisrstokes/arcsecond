@@ -2,7 +2,7 @@
 
 [Back to part 5](./tutorial-part-5.md)
 
-*Goal*: To understand how to track down bugs and errors in parsers
+_Goal_: To understand how to track down bugs and errors in parsers
 
 No one writes code perfectly first time, and when trying to communicate with the computer about how you'd like it to process some text, you might find it's not very forgiving if you don't give it exactly what it's expecting. The best thing you can do is to learn some techniques for tracking down your miscommunications with the computer.
 
@@ -11,24 +11,18 @@ No one writes code perfectly first time, and when trying to communicate with the
 Let's examine a fairly simple parser
 
 ```javascript
-const {
-  sequenceOf,
-  char,
-  digits,
-  letters,
-  choice
-} = require('arcsecond');
+const { sequenceOf, char, digits, letters, choice } = require('arcsecond');
 
 const space = char(' ');
 
-const lettersOrDigits = choice([ letters, digits ]);
+const lettersOrDigits = choice([letters, digits]);
 
 const fullParser = sequenceOf([
   letters,
   space,
   lettersOrDigits,
   space,
-  letters
+  letters,
 ]);
 
 fullParser.run('hello _ world').error;
@@ -44,12 +38,12 @@ const {
   digits,
   letters,
   choice,
-  tapParser
+  tapParser,
 } = require('arcsecond');
 
 const space = char(' ');
 
-const lettersOrDigits = choice([ letters, digits ]);
+const lettersOrDigits = choice([letters, digits]);
 
 const fullParser = sequenceOf([
   letters,
@@ -81,7 +75,7 @@ const {
   digits,
   letters,
   choice,
-  tapParser
+  tapParser,
 } = require('arcsecond');
 
 const tap = fn => x => {
@@ -91,7 +85,7 @@ const tap = fn => x => {
 
 const space = char(' ');
 
-const lettersOrDigits = choice([ letters, digits ]);
+const lettersOrDigits = choice([letters, digits]);
 
 const fullParser = sequenceOf([
   letters.errorMap(tap(x => console.log(1))),
@@ -115,7 +109,7 @@ const {
   digits,
   letters,
   choice,
-  tapParser
+  tapParser,
 } = require('arcsecond');
 
 const tap = fn => x => {
@@ -125,14 +119,14 @@ const tap = fn => x => {
 
 const space = char(' ');
 
-const lettersOrDigits = choice([ letters, digits ]);
+const lettersOrDigits = choice([letters, digits]);
 
-const fullParser = coroutine(function* () {
-  const first = yield letters;
-  yield space;
-  const second = yield lettersOrDigits;
-  yield space;
-  const third = yield letters;
+const fullParser = coroutine(run => {
+  const first = run(letters);
+  run(space);
+  const second = run(lettersOrDigits);
+  run(space);
+  const third = run(letters);
 
   return [first, second, third];
 });
@@ -140,8 +134,6 @@ const fullParser = coroutine(function* () {
 fullParser.run('hello _ world').error;
 // -> ParseError (position 6): Expecting letters
 ```
-
-Because generators are just regular JavaScript, we can put breakpoints on these lines and step through! It's a bit more complex to set up, but this is absolutely the best bug-squashing technique, since you can watch your parser working step by step, seeing the results as you go.
 
 ## Summary
 

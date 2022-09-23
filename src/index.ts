@@ -1,6 +1,6 @@
 import { decoder, encoder, getCharacterLength, getNextCharWidth, getString, getUtf8Char } from "./unicode";
 import { InputType, InputTypes } from "./inputTypes";
-import { FnReturingParserIterator, Parser, ParserState, Err, Ok, ResultType, updateData, updateError, updateParserState, updateResult } from "./parser";
+import { Parser, ParserState, Err, Ok, ResultType, updateData, updateError, updateParserState, updateResult } from "./parser";
 
 // Caching compiled regexs for better performance
 const reDigit = /[0-9]/;
@@ -9,7 +9,7 @@ const reLetter = /[a-zA-Z]/;
 const reLetters = /^[a-zA-Z]+/;
 const reWhitespaces = /^\s+/;
 const reErrorExpectation = /ParseError.+Expecting/;
-export type { ParserState, ResultType, FnReturingParserIterator, Err, Ok, InputType }
+export type { ParserState, ResultType, Err, Ok, InputType }
 export { encoder, decoder, updateData, Parser, updateError, updateParserState, updateResult, InputTypes, getCharacterLength, getNextCharWidth, getString, getUtf8Char }
 
 // getData :: Parser e a s
@@ -142,35 +142,38 @@ export function either<T>(parser: Parser<T>): Parser<{isError: boolean, value: T
   });
 };
 
-// coroutine :: (() -> Iterator (Parser e a s)) -> Parser e a s
-export function coroutine<T>(g: FnReturingParserIterator<T>): Parser<T> {
+type ParserFn<T> = (_yield:<K>(parser:Parser<K>)=>K)=>T;
+
+export function coroutine<T>(parserFn: ParserFn<T>): Parser<T> {
   return new Parser(function coroutine$state(state) {
-    const generator = g();
-
-    let nextValue = undefined;
-    let nextState = state;
-
-    while (true) {
-      const result = generator.next(nextValue);
-      const value = result.value;
-      const done = result.done;
-
-      if (done) {
-        return updateResult(nextState, value);
-      }
-
-      if (!(value && value instanceof Parser)) {
+    let currentValue;
+    let currentState = state;
+    
+    const run = <T>(parser: Parser<T>) => {
+      if (!(parser && parser instanceof Parser)) {
         throw new Error(
-          `[coroutine] yielded values must be Parsers, got ${result.value}.`,
+          `[coroutine] passed values must be Parsers, got ${parser}.`,
         );
       }
-
-      nextState = value.p(nextState);
-      if (nextState.isError) {
-        return nextState;
+      const newState = parser.p(currentState);
+      if (newState.isError) {
+        throw newState;
+      } else {
+        currentState = newState;
       }
+      currentValue = currentState.result;
+      return currentValue;
+    }
 
-      nextValue = nextState.result;
+    try {
+      const result = parserFn(run);
+      return updateResult(currentState,result);
+    } catch (e) {
+      if (e instanceof Error) {
+        throw e;
+      } else {
+        return e as ParserState<any, any, any>;
+      }
     }
   });
 };

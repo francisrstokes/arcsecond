@@ -9,11 +9,7 @@
 A very common scenario is to build a parser which matches values that are separated by some marker. For example, we might want to build a parser combinator for matching comma separated values:
 
 ```javascript
-const {
-  sepBy,
-  char,
-  letters
-} = require('arcsecond');
+const { sepBy, char, letters } = require('arcsecond');
 
 const commaSeparated = sepBy(char(','));
 
@@ -26,13 +22,9 @@ finalParser.run('big,list,of,words');
 Here we assigned `commaSeparated` as a variable, because this is a common task we might want to use to capture many different kinds of data, not only letters. While this is not necessary, it's less expressive if this is just done inline:
 
 ```javascript
-const {
-  sepBy,
-  char,
-  letters
-} = require('arcsecond');
+const { sepBy, char, letters } = require('arcsecond');
 
-const finalParser = sepBy (char(',')) (letters);
+const finalParser = sepBy(char(','))(letters);
 
 finalParser.run('big,list,of,words');
 // -> {
@@ -53,10 +45,12 @@ const {
   char,
   letters,
   optionalWhitespace,
-  sequenceOf
+  sequenceOf,
 } = require('arcsecond');
 
-const commaSeparated = sepBy(sequenceOf([ optionalWhitespace, char(','), optionalWhitespace ]));
+const commaSeparated = sepBy(
+  sequenceOf([optionalWhitespace, char(','), optionalWhitespace]),
+);
 
 const finalParser = commaSeparated(letters);
 
@@ -72,12 +66,9 @@ finalParser.run('big,       list, of,                        words');
 Another common use case is extracting data that comes between two known endpoints, such as brackets. We can write a parser called `betweenBrackets` quite easily:
 
 ```javascript
-const {
-  between,
-  char,
-} = require('arcsecond');
+const { between, char } = require('arcsecond');
 
-const betweenBrackets = between (char('(')) (char(')'));
+const betweenBrackets = between(char('('))(char(')'));
 
 const finalParser = betweenBrackets(letters);
 
@@ -104,33 +95,35 @@ const {
   either,
 } = require('arcsecond');
 
-const customSepByWithSequenceOf = separatorParser => valueParser => sequenceOf([
-  sepBy (separatorParser) (valueParser),
-  possibly (separatorParser)
-]).map(results => results[0]);
+const customSepByWithSequenceOf = separatorParser => valueParser =>
+  sequenceOf([
+    sepBy(separatorParser)(valueParser),
+    possibly(separatorParser),
+  ]).map(results => results[0]);
 
-const customSepByWithCoroutine = separatorParser => valueParser => coroutine(function* () {
-  const results = [];
+const customSepByWithCoroutine = separatorParser => valueParser =>
+  coroutine(run => {
+    const results = [];
 
-  while (true) {
-    const value = yield either(valueParser);
+    while (true) {
+      const value = run(either(valueParser));
 
-    // We can't parse more values, break from the loop
-    if (value.isError) break;
+      // We can't parse more values, break from the loop
+      if (value.isError) break;
 
-    // Push the captured value into the results array
-    results.push(value);
+      // Push the captured value into the results array
+      results.push(value);
 
-    const sep = yield either(separatorParser);
+      const sep = run(either(separatorParser));
 
-    // There are no more separators, break from the loop
-    if (sep.isError) break;
-  }
+      // There are no more separators, break from the loop
+      if (sep.isError) break;
+    }
 
-  // sepBy allows for zero results to be matched, so we will here too.
-  // If you need *at least one* result, you should use sepBy1
-  return results;
-});
+    // sepBy allows for zero results to be matched, so we will here too.
+    // If you need *at least one* result, you should use sepBy1
+    return results;
+  });
 ```
 
 [For a full list of the built in parser combinators, you can checkout the API docs](https://github.com/francisrstokes/arcsecond#api). Building a parser of any substantial complexity will definitely require many utility parsers, so it will be worth the time to give them names and work out the range of flexibility each should offer.
