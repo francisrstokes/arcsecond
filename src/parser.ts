@@ -1,5 +1,6 @@
 import { encoder } from './unicode';
 import { InputType, InputTypes, isTypedArray } from './inputTypes';
+import { clearCache, memoize } from './cache';
 
 // createParserState :: x -> s -> ParserState e a s
 const createParserState = <D>(target: InputType, data: D | null = null): ParserState<null, string | null, D | null> => {
@@ -90,12 +91,14 @@ export class Parser<T, E = string, D = any> {
   p: StateTransformerFunction<T, E, D>;
 
   constructor(p: StateTransformerFunction<T, E, D>) {
-    this.p = p;
+    this.p = memoize(p);
   }
 
   // run :: Parser e a s ~> x -> Either e a
   run(target: InputType): ResultType<T, E, D> {
     const state = createParserState(target);
+
+    clearCache();
 
     const resultState = this.p(state);
 
@@ -122,6 +125,8 @@ export class Parser<T, E = string, D = any> {
   ) {
     const state = createParserState(target);
     const newState = this.p(state);
+
+    clearCache();
 
     if (newState.isError) {
       return errorFn(newState.error, newState);
