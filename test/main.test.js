@@ -1,5 +1,6 @@
-const { TextEncoder } = require('util');
-const {
+import { test, expect, describe } from 'vitest';
+import { TextEncoder } from 'util';
+import {
   Parser,
   parse,
   char,
@@ -51,12 +52,12 @@ const {
   startOfInput,
   endOfInput,
   withData,
-} = require('../index');
+} from '../src/index';
 
 const encoder = new TextEncoder();
 
-const f = x => ({ f: x });
-const g = x => ({ g: x });
+const f = (x) => ({ f: x });
+const g = (x) => ({ g: x });
 
 // https://github.com/fluture-js/Fluture/blob/0ae92d9d61ca8f112ef2bb2327b7e8680100bff1/test/util/util.js#L8
 const MAX_STACK_SIZE = (function r() {
@@ -77,16 +78,16 @@ const expectEquivalence = (parserA, parserB) => () => {
     '≈ç√∫˜µ hgello skajb',
   ];
 
-  strings.forEach(s => {
+  strings.forEach((s) => {
     expect(parse(parserA)(s)).toEqual(parse(parserB)(s));
   });
 };
 
-const failLeft = state => {
+const failLeft = (state) => {
   console.log(state);
   throw new Error('Expected a success');
 };
-const failRight = state => {
+const failRight = (state) => {
   console.log(state);
   throw new Error('Expected an error');
 };
@@ -107,27 +108,26 @@ const expectedSuccessTest = (parser, expectation, testingString) => () => {
   }
 };
 
-const expectedThrowTest = (
-  parserFn,
-  testingString,
-  errorMessage = '',
-) => () => {
-  expect(() => {
-    parse(parserFn())(testingString);
-  }).toThrow(errorMessage);
-};
+const expectedThrowTest =
+  (parserFn, testingString, errorMessage = '') =>
+  () => {
+    expect(() => {
+      parse(parserFn())(testingString);
+    }).toThrow(errorMessage);
+  };
 
-const testMany = (msg, testFns) => test(msg, () => testFns.forEach(fn => fn()));
+const testMany = (msg, testFns) =>
+  test(msg, () => testFns.forEach((fn) => fn()));
 
 testMany.only = (msg, testFns) => {
   describe.only('', () => {
-    test(msg, () => testFns.forEach(fn => fn()));
+    test(msg, () => testFns.forEach((fn) => fn()));
   });
 };
 
 test('ArrayBuffer as input', () => {
   const input = Uint8Array.from(
-    'hello world!'.split('').map(c => c.charCodeAt(0)),
+    'hello world!'.split('').map((c) => c.charCodeAt(0)),
   ).buffer;
   const parser = sequenceOf([
     letters,
@@ -141,7 +141,7 @@ test('ArrayBuffer as input', () => {
 
 test('TypedArray as input', () => {
   const input = Uint8Array.from(
-    'hello world!'.split('').map(c => c.charCodeAt(0)),
+    'hello world!'.split('').map((c) => c.charCodeAt(0)),
   );
   const parser = sequenceOf([
     letters,
@@ -155,7 +155,9 @@ test('TypedArray as input', () => {
 
 test('DataView as input', () => {
   const input = new DataView(
-    Uint8Array.from('hello world!'.split('').map(c => c.charCodeAt(0))).buffer,
+    Uint8Array.from(
+      'hello world!'.split('').map((c) => c.charCodeAt(0)),
+    ).buffer,
   );
   const parser = sequenceOf([
     letters,
@@ -167,7 +169,7 @@ test('DataView as input', () => {
   expectedSuccessTest(parser, ['hello', ' ', 'world', '!', null], input)();
 });
 
-test('Parser', expectedSuccessTest(new Parser(x => x), null, 'something'));
+test('Parser', expectedSuccessTest(new Parser((x) => x), null, 'something'));
 
 testMany('char', [
   expectedSuccessTest(char('a'), 'a', 'abc123'),
@@ -233,7 +235,7 @@ testMany('either', [
 
 testMany('coroutine', [
   () => {
-    const p = coroutine(run => {
+    const p = coroutine((run) => {
       const firstPart = run(letters);
       const secondPart = run(digits);
       return {
@@ -253,7 +255,7 @@ testMany('coroutine', [
     });
   },
   () => {
-    const p = coroutine(run => {
+    const p = coroutine((run) => {
       const firstPart = run(letters);
       const secondPart = run(digits.errorMap(() => 'Wanted digits'));
       return {
@@ -268,7 +270,7 @@ testMany('coroutine', [
     expect(res.index).toEqual(3);
   },
   () => {
-    const p = coroutine(run => {
+    const p = coroutine((run) => {
       const firstPart = run(letters);
       const secondPart = run(42);
       return {
@@ -611,7 +613,7 @@ testMany('takeLeft', [
 
 testMany('mapTo', [
   expectedSuccessTest(
-    pipeParsers([char('a'), mapTo(x => ({ theLetter: x }))]),
+    pipeParsers([char('a'), mapTo((x) => ({ theLetter: x }))]),
     { theLetter: 'a' },
     'abc',
   ),
@@ -622,7 +624,7 @@ testMany('mapTo', [
   ),
 ]);
 
-const decideFn = x => {
+const decideFn = (x) => {
   if (x === 'a') {
     return digit;
   } else if (x === 'b') {
@@ -658,7 +660,7 @@ test('tapParser', () => {
   let value;
   const parser = pipeParsers([
     char('a'),
-    tapParser(x => {
+    tapParser((x) => {
       wasCalled = true;
       value = x;
     }),
@@ -691,17 +693,17 @@ test('toPromise', async () => {
   const succeeded = toPromise(Parser.of('all good').run('nope'));
 
   await failed
-    .then(x => {
+    .then((x) => {
       console.log(x);
       throw new Error('Expected to reject');
     })
-    .catch(failState => {
+    .catch((failState) => {
       expect(failState.error).toEqual('crash');
       expect(failState.index).toEqual(0);
     });
 
   await succeeded
-    .then(x => expect(x).toBe('all good'))
+    .then((x) => expect(x).toBe('all good'))
     .catch(() => {
       throw new Error('Expected to resolve');
     });
@@ -741,7 +743,7 @@ testMany('fork', [
 
     const out = p.fork(
       'Hello',
-      x => {
+      (x) => {
         errorTriggered = true;
         return x;
       },
@@ -765,7 +767,7 @@ testMany('fork', [
       .mapData(() => 'my data')
       .fork(
         'Hello',
-        x => {
+        (x) => {
           errorTriggered = true;
           return x;
         },
@@ -792,7 +794,7 @@ testMany('fork', [
         expect(parserState.data).toEqual(null);
         return x;
       },
-      x => {
+      (x) => {
         successTriggered = true;
         return x;
       },
@@ -812,7 +814,7 @@ testMany('withData', [
 
     parser('my data').fork(
       '42 is the answer',
-      e => {
+      () => {
         wasError = true;
       },
       (value, parserState) => {
@@ -827,7 +829,7 @@ testMany('withData', [
 
 test('getData', () => {
   const p = withData(
-    coroutine(run => {
+    coroutine((run) => {
       const stateData = run(getData);
       return stateData;
     }),
@@ -839,7 +841,7 @@ test('getData', () => {
 
 testMany('setData', [
   () => {
-    const parser = coroutine(run => {
+    const parser = coroutine((run) => {
       run(setData('New Data'));
       return 42;
     });
@@ -848,7 +850,7 @@ testMany('setData', [
 
     parser.fork(
       'Hello',
-      e => {
+      () => {
         wasError = true;
       },
       (value, parserState) => {
@@ -861,9 +863,9 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(run => {
+      coroutine((run) => {
         const data = run(getData);
-        run(setData(data.map(x => x * 2)));
+        run(setData(data.map((x) => x * 2)));
         return 42;
       }),
     );
@@ -872,7 +874,7 @@ testMany('setData', [
 
     parser([1, 2, 3]).fork(
       'Hello',
-      e => {
+      () => {
         wasError = true;
       },
       (value, parserState) => {
@@ -885,7 +887,7 @@ testMany('setData', [
   },
   () => {
     const parser = withData(
-      coroutine(run => {
+      coroutine((run) => {
         run(setData('persists!'));
         run(fail('nope'));
         return 42;
@@ -912,8 +914,8 @@ testMany('setData', [
 testMany('mapData', [
   () => {
     const parser = withData(
-      coroutine(run => {
-        run(mapData(d => d.map(x => x * 2)));
+      coroutine((run) => {
+        run(mapData((d) => d.map((x) => x * 2)));
         return 42;
       }),
     );
@@ -922,7 +924,7 @@ testMany('mapData', [
 
     parser([1, 2, 3]).fork(
       'Hello',
-      e => {
+      () => {
         wasError = true;
       },
       (value, parserState) => {
@@ -934,13 +936,13 @@ testMany('mapData', [
     expect(wasError).toBe(false);
   },
   () => {
-    const parser = withData(Parser.of(42).mapData(d => d.map(x => x * 2)));
+    const parser = withData(Parser.of(42).mapData((d) => d.map((x) => x * 2)));
 
     let wasError = false;
 
     parser([1, 2, 3]).fork(
       'Hello',
-      e => {
+      () => {
         wasError = true;
       },
       (value, parserState) => {
@@ -955,7 +957,7 @@ testMany('mapData', [
 
 testMany('.errorChain', [
   () => {
-    const p = val =>
+    const p = (val) =>
       fail(val).errorChain(({ error }) => {
         if (error === 42) {
           return letters;
@@ -1058,7 +1060,7 @@ test('chainFromData', () => {
 });
 
 test('map (equivalence to mapTo)', () => {
-  const fn = x => ({ value: x });
+  const fn = (x) => ({ value: x });
 
   const successMap = letters.map(fn);
   const successMapTo = pipeParsers([letters, mapTo(fn)]);
@@ -1072,11 +1074,11 @@ test('map (equivalence to mapTo)', () => {
 
 testMany('map (laws)', [
   expectEquivalence(
-    letters.map(x => x),
+    letters.map((x) => x),
     letters,
   ),
   expectEquivalence(
-    letters.map(x => f(g(x))),
+    letters.map((x) => f(g(x))),
     letters.map(g).map(f),
   ),
 ]);
@@ -1087,16 +1089,14 @@ testMany('errorMap (laws)', [
     fail('nope'),
   ),
   expectEquivalence(
-    fail('nope').map(x => f(g(x))),
-    fail('nope')
-      .map(g)
-      .map(f),
+    fail('nope').map((x) => f(g(x))),
+    fail('nope').map(g).map(f),
   ),
 ]);
 
 test('errorMap (equivalence to errorMapTo)', () => {
   const fnMap = ({ error }) => ({ value: error });
-  const fnMapTo = x => ({ value: x });
+  const fnMapTo = (x) => ({ value: x });
 
   const failMap = fail('nope').errorMap(fnMap);
   const failMapTo = pipeParsers([fail('nope'), errorMapTo(fnMapTo)]);
@@ -1109,7 +1109,7 @@ test('chain (equivalence to decide)', () => {
   const testStr2 = 'num 42';
   const testStr3 = 'num 42';
 
-  const fn = x => {
+  const fn = (x) => {
     if (x === 'num ') {
       return digits;
     } else if (x === 'str ') {
@@ -1139,7 +1139,7 @@ test('chain (equivalence to decide)', () => {
 testMany('chain (laws)', [
   expectEquivalence(
     letters.chain(() => digits).chain(() => char('a')),
-    letters.chain(x => (() => digits)(x).chain(() => char('a'))),
+    letters.chain((x) => (() => digits)(x).chain(() => char('a'))),
   ),
 ]);
 
@@ -1148,22 +1148,22 @@ testMany('errorChain (laws)', [
     fail('no')
       .errorChain(() => digits)
       .chain(() => char('a')),
-    fail('no').errorChain(x => (() => digits)(x).chain(() => char('a'))),
+    fail('no').errorChain((x) => (() => digits)(x).chain(() => char('a'))),
   ),
 ]);
 
 testMany('applicative (laws)', [
-  expectEquivalence(letters.ap(Parser.of(x => x)), letters),
+  expectEquivalence(letters.ap(Parser.of((x) => x)), letters),
   expectEquivalence(Parser.of(42).ap(Parser.of(f)), Parser.of(f(42))),
   expectEquivalence(
     Parser.of(42).ap(Parser.of(f)),
-    Parser.of(f).ap(Parser.of(fn => fn(42))),
+    Parser.of(f).ap(Parser.of((fn) => fn(42))),
   ),
 ]);
 
 test('ap (equivalence to ...)', () => {
   const testStr = 'hello';
-  const fn = x => ({ value: x });
+  const fn = (x) => ({ value: x });
 
   const sNonAp = pipeParsers([
     sequenceOf([succeedWith(fn), letters]),
@@ -1185,7 +1185,7 @@ test('ap (equivalence to ...)', () => {
 
 testMany('ap (laws)', [
   expectEquivalence(
-    letters.ap(Parser.of(g).ap(Parser.of(f).map(f => g => x => f(g(x))))),
+    letters.ap(Parser.of(g).ap(Parser.of(f).map((f) => (g) => (x) => f(g(x))))),
     letters.ap(Parser.of(g)).ap(Parser.of(f)),
   ),
 ]);
@@ -1194,7 +1194,7 @@ test('coroutine is stack safe', () => {
   const doubleStack = MAX_STACK_SIZE * 2;
   const input = 'a'.repeat(doubleStack);
 
-  const parser = coroutine(run => {
+  const parser = coroutine((run) => {
     let out = '';
     for (let i = 0; i < doubleStack; i++) {
       out += run(letter).toUpperCase();

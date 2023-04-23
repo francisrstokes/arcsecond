@@ -4,3 +4,4 @@ coverage/
 examples/
 test/
 tutorial/
+build.mjs

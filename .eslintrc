@@ -1,12 +1,15 @@
 {
-  "extends": ["standard", "prettier"],
-  "plugins": ["prettier"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "plugins": ["@typescript-eslint", "prettier"],
   "parserOptions": {
     "sourceType": "module"
   },
   "env": {
     "es6": true,
-    "jest": true,
     "node": true
   },
   "rules": {
