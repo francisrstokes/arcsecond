@@ -16,7 +16,18 @@ if (typeof TextEncoder !== 'undefined') {
 export const encoder = new text.Encoder();
 export const decoder = new text.Decoder();
 
+const dataViewStringCache = new WeakMap<DataView, string>();
+
+export const setDataViewString = (dataView: DataView, string: string) => {
+  dataViewStringCache.set(dataView, string);
+}
+
 export const getString = (index: number, length: number, dataView: DataView) => {
+  if (dataViewStringCache.has(dataView)) {
+    const cachedString = dataViewStringCache.get(dataView)!;
+    const decodedStringFromCache = cachedString.slice(index, index + length);
+    return decodedStringFromCache;
+  }
   const bytes = Uint8Array.from({ length }, (_, i) =>
     dataView.getUint8(index + i)
   );
@@ -33,12 +44,7 @@ export const getNextCharWidth = (index: number, dataView: DataView) => {
   return 1;
 };
 
-export const getUtf8Char = (index: number, length: number, dataView: DataView) => {
-  const bytes = Uint8Array.from({ length }, (_, i) =>
-    dataView.getUint8(index + i),
-  );
-  return decoder.decode(bytes);
-};
+export const getUtf8Char = getString;
 
 export const getCharacterLength = (str: string) => {
   let cp;

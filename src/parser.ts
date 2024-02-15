@@ -1,4 +1,4 @@
-import { encoder } from './unicode';
+import { encoder, setDataViewString } from './unicode';
 import { InputType, InputTypes, isTypedArray } from './inputTypes';
 
 // createParserState :: x -> s -> ParserState e a s
@@ -10,6 +10,7 @@ const createParserState = <D>(target: InputType, data: D | null = null): ParserS
     const bytes = encoder.encode(target);
     dataView = new DataView(bytes.buffer);
     inputType = InputTypes.STRING;
+    setDataViewString(dataView, target);
   } else if (target instanceof ArrayBuffer) {
     dataView = new DataView(target);
     inputType = InputTypes.ARRAY_BUFFER;

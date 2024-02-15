@@ -13,7 +13,8 @@ const {
   optionalWhitespace,
   between,
   anyOfString,
-  recursiveParser
+  recursiveParser,
+  encoder,
 } = require('.');
 
 const parseJsonValue = recursiveParser(() => choice ([
@@ -113,8 +114,17 @@ for (const [ name, json ] of Object.entries({ smallJson, mediumJson, largeJson }
       JSON.parse(json);
     }),
 
-    b.add('parseJsonValue', () => {
+    b.add('parseJsonValue on string', () => {
       parseJsonValue.run(json);
+    }),
+
+    b.add('parseJsonValue on DataView', () => {
+      const bytes = encoder.encode(json);
+      const dataView = new DataView(bytes.buffer);
+
+      return () => {
+        parseJsonValue.run(dataView);
+      };
     }),
 
     b.cycle(),
